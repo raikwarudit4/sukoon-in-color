@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 type CatalogProduct = {
@@ -33,9 +34,10 @@ export default async function Home() {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, description, product_media(id, url, alt_text, sort_order), product_variants(id, title, price_minor, currency)",
+      "id, name, slug, description, stores!inner(slug), product_media(id, url, alt_text, sort_order), product_variants(id, title, price_minor, currency)",
     )
     .eq("status", "active")
+    .eq("stores.slug", "sukoon-in-color")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -48,9 +50,9 @@ export default async function Home() {
     <main className="min-h-screen bg-[#fbf8f4] text-[#27221f]">
       <header className="border-b border-[#e8dfd7] bg-[#fbf8f4]">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-10">
-          <a href="/" className="text-lg font-semibold tracking-[0.12em]">
+          <Link href="/" className="text-lg font-semibold tracking-[0.12em]">
             SUKOON <span className="text-[#b56e70]">IN COLOR</span>
-          </a>
+          </Link>
           <span className="text-sm text-[#716763]">A little color, a little calm.</span>
         </div>
       </header>
@@ -102,8 +104,9 @@ export default async function Home() {
               )[0];
 
               return (
-                <article
+                <Link
                   key={product.id}
+                  href={`/products/${product.slug}`}
                   className="flex min-h-60 flex-col rounded-2xl border border-[#eee5de] bg-white p-6 shadow-[0_6px_24px_rgba(72,47,37,0.04)]"
                 >
                   {image ? (
@@ -133,7 +136,7 @@ export default async function Home() {
                       ? formatPrice(variant.price_minor, variant.currency)
                       : "Price coming soon"}
                   </div>
-                </article>
+                </Link>
               );
             })}
           </div>
