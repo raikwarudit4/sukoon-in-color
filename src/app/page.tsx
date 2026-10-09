@@ -1,12 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AccountNav } from "@/components/account-nav";
 import { createClient } from "@/lib/supabase/server";
+import { CatalogFilters } from "@/components/catalog-filters";
 
 type CatalogProduct = {
   id: string;
   name: string;
   slug: string;
   description: string | null;
+  category_id: string | null;
+  created_at: string;
+  categories: { name: string; slug: string }[];
   product_media: {
     id: string;
     url: string;
@@ -29,22 +34,50 @@ function formatPrice(amountMinor: number, currency: string) {
   }).format(amountMinor / 100);
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const params = await searchParams;
+  const query = (params.q ?? "").trim().slice(0, 100);
+  const categorySlug = params.category ?? "";
+  const sort = params.sort ?? "newest";
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data: store } = await supabase
+    .from("stores")
+    .select("id")
+    .eq("slug", "sukoon-in-color")
+    .eq("status", "active")
+    .maybeSingle();
+  const { data: categories } = store ? await supabase
+    .from("categories")
+    .select("id, name, slug")
+    .eq("store_id", store.id)
+    .eq("is_active", true)
+    .order("sort_order") : { data: [] };
+  const selectedCategory = (categories ?? []).find((category) => category.slug === categorySlug);
+  let productsQuery = supabase
     .from("products")
     .select(
-      "id, name, slug, description, stores!inner(slug), product_media(id, url, alt_text, sort_order), product_variants(id, title, price_minor, currency)",
+      "id, name, slug, description, category_id, created_at, categories(name, slug), stores!inner(slug), product_media(id, url, alt_text, sort_order), product_variants(id, title, price_minor, currency)",
     )
     .eq("status", "active")
     .eq("stores.slug", "sukoon-in-color")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (query) productsQuery = productsQuery.ilike("name", `%${query.replace(/[%_]/g, "\\$&")}%`);
+  if (selectedCategory) productsQuery = productsQuery.eq("category_id", selectedCategory.id);
+  const { data, error } = await productsQuery;
 
   if (error) {
     console.error("Could not load the public product catalog:", error.message);
   }
 
   const products = (data ?? []) as CatalogProduct[];
+  if (sort === "price-asc") products.sort((a, b) => (a.product_variants?.[0]?.price_minor ?? 0) - (b.product_variants?.[0]?.price_minor ?? 0));
+  if (sort === "price-desc") products.sort((a, b) => (b.product_variants?.[0]?.price_minor ?? 0) - (a.product_variants?.[0]?.price_minor ?? 0));
+  if (sort === "name") products.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <main className="min-h-screen bg-[#fbf8f4] text-[#27221f]">
@@ -53,7 +86,13 @@ export default async function Home() {
           <Link href="/" className="text-lg font-semibold tracking-[0.12em]">
             SUKOON <span className="text-[#b56e70]">IN COLOR</span>
           </Link>
-          <span className="text-sm text-[#716763]">A little color, a little calm.</span>
+          <div className="flex items-center gap-6">
+            <span className="hidden text-sm text-[#716763] sm:inline">
+              A little color, a little calm.
+            </span>
+            <AccountNav />
+            <Link href="/cart" className="text-sm font-medium text-[#716763] hover:text-[#a15e61]">Cart</Link>
+          </div>
         </div>
       </header>
 
@@ -70,6 +109,7 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-6 pb-20 lg:px-10">
+        <CatalogFilters categories={categories ?? []} query={query} category={categorySlug} sort={sort} />
         <div className="mb-7 flex items-end justify-between border-b border-[#e8dfd7] pb-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a15e61]">

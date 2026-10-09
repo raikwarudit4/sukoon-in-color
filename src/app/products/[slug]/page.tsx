@@ -1,10 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AccountNav } from "@/components/account-nav";
 import { createClient } from "@/lib/supabase/server";
+import { AddToCart } from "./add-to-cart";
 
 type ProductDetail = {
   id: string;
+  store_id: string;
   name: string;
   slug: string;
   description: string | null;
@@ -23,14 +26,6 @@ type ProductDetail = {
   }[];
 };
 
-function formatPrice(amountMinor: number, currency: string) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: currency.trim() || "INR",
-    maximumFractionDigits: 2,
-  }).format(amountMinor / 100);
-}
-
 export default async function ProductPage({
   params,
 }: {
@@ -41,7 +36,7 @@ export default async function ProductPage({
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, name, slug, description, stores!inner(slug), product_media(id, url, alt_text, sort_order), product_variants(id, title, sku, price_minor, currency)",
+      "id, store_id, name, slug, description, stores!inner(slug), product_media(id, url, alt_text, sort_order), product_variants(id, title, sku, price_minor, currency)",
     )
     .eq("slug", slug)
     .eq("status", "active")
@@ -80,9 +75,12 @@ export default async function ProductPage({
           <Link href="/" className="text-lg font-semibold tracking-[0.12em]">
             SUKOON <span className="text-[#b56e70]">IN COLOR</span>
           </Link>
-          <Link href="/" className="text-sm text-[#716763] hover:text-[#a15e61]">
-            Back to collection
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link href="/" className="text-sm text-[#716763] hover:text-[#a15e61]">
+              Back to collection
+            </Link>
+            <AccountNav />
+          </div>
         </div>
       </header>
 
@@ -110,36 +108,17 @@ export default async function ProductPage({
           <h1 className="mt-3 text-3xl font-medium leading-tight sm:text-5xl">
             {product.name}
           </h1>
-          {variants.length > 0 && (
-            <p className="mt-5 text-2xl font-semibold">
-              {formatPrice(variants[0].price_minor, variants[0].currency)}
-            </p>
-          )}
           {product.description && (
             <p className="mt-6 whitespace-pre-line text-base leading-7 text-[#716763]">
               {product.description}
             </p>
           )}
 
-          {variants.length > 1 && (
-            <div className="mt-8 border-t border-[#e8dfd7] pt-6">
-              <h2 className="text-sm font-semibold">Available options</h2>
-              <ul className="mt-3 space-y-2">
-                {variants.map((variant) => (
-                  <li key={variant.id} className="flex justify-between gap-4 text-sm">
-                    <span className="text-[#716763]">{variant.title}</span>
-                    <span className="font-medium">
-                      {formatPrice(variant.price_minor, variant.currency)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <p className="mt-9 rounded-xl bg-white px-4 py-3 text-sm text-[#716763]">
-            Online ordering is coming soon. For now, browse the collection and product details.
-          </p>
+          <AddToCart
+            storeId={product.store_id}
+            variants={variants}
+            returnPath={`/products/${product.slug}`}
+          />
         </div>
       </section>
     </main>
