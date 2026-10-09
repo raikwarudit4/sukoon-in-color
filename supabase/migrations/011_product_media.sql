@@ -1,0 +1,1 @@
+create table public.product_media (id uuid primary key default gen_random_uuid(), store_id uuid not null, product_id uuid not null, url text not null, alt_text text, sort_order integer not null default 0, created_at timestamptz not null default now(), foreign key(store_id,product_id) references public.products(store_id,id) on delete cascade);

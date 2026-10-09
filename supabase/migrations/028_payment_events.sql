@@ -1,0 +1,1 @@
+create table public.payment_events (id uuid primary key default gen_random_uuid(), payment_id uuid not null references public.payments(id) on delete cascade, event_key text not null unique, event_type text not null, payload jsonb not null default '{}'::jsonb, received_at timestamptz not null default now(), processed_at timestamptz);

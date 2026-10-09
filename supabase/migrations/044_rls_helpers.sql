@@ -1,0 +1,1 @@
+create or replace function public.is_store_member(target_store uuid) returns boolean language sql stable security definer set search_path=public as $$ select exists(select 1 from public.store_memberships m where m.store_id=target_store and m.user_id=public.current_user_id() and m.status='active') $$;

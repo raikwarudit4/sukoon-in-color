@@ -1,0 +1,2 @@
+create table public.product_options (id uuid primary key default gen_random_uuid(), store_id uuid not null, product_id uuid not null, name text not null, sort_order integer not null default 0, foreign key(store_id,product_id) references public.products(store_id,id) on delete cascade, unique(product_id,name));
+create table public.product_option_values (id uuid primary key default gen_random_uuid(), option_id uuid not null references public.product_options(id) on delete cascade, value text not null, sort_order integer not null default 0, unique(option_id,value));

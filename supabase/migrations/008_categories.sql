@@ -1,0 +1,2 @@
+create table public.categories (id uuid primary key default gen_random_uuid(), store_id uuid not null references public.stores(id) on delete cascade, parent_id uuid, name text not null, slug text not null, description text, sort_order integer not null default 0, is_active boolean not null default true, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), unique(store_id,slug), unique(store_id,id));
+create index idx_categories_parent on public.categories(store_id,parent_id);

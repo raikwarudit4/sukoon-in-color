@@ -1,0 +1,2 @@
+create table public.audit_logs (id bigint generated always as identity primary key, store_id uuid references public.stores(id) on delete set null, actor_user_id uuid references public.users(id) on delete set null, action text not null, entity_type text not null, entity_id text, before_data jsonb, after_data jsonb, request_id text, created_at timestamptz not null default now());
+create index idx_audit_store_created on public.audit_logs(store_id,created_at desc);

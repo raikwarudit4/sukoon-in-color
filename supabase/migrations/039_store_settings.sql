@@ -1,0 +1,1 @@
+create table public.store_settings (store_id uuid not null references public.stores(id) on delete cascade, setting_key text not null, value jsonb not null, updated_at timestamptz not null default now(), primary key(store_id,setting_key));

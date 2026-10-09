@@ -1,0 +1,2 @@
+create table public.carts (id uuid primary key default gen_random_uuid(), store_id uuid not null references public.stores(id) on delete cascade, user_id uuid references public.users(id) on delete set null, session_key text, currency char(3) not null default 'INR', expires_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), check(user_id is not null or session_key is not null), unique(store_id,id));
+create unique index uq_cart_session on public.carts(store_id,session_key) where session_key is not null;

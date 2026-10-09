@@ -1,0 +1,2 @@
+create table public.tax_classes (id uuid primary key default gen_random_uuid(), store_id uuid not null references public.stores(id) on delete cascade, name text not null, rate_basis_points integer not null check(rate_basis_points between 0 and 10000), is_default boolean not null default false, created_at timestamptz not null default now(), unique(store_id,name));
+create unique index uq_tax_default on public.tax_classes(store_id) where is_default;

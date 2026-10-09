@@ -1,0 +1,1 @@
+create table public.review_media (id uuid primary key default gen_random_uuid(), review_id uuid not null references public.reviews(id) on delete cascade, url text not null, created_at timestamptz not null default now());
