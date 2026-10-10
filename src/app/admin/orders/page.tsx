@@ -8,6 +8,9 @@ type StoreOrder = {
   order_number: string;
   status: string;
   currency: string;
+  subtotal_minor: number;
+  shipping_minor: number;
+  tax_minor: number;
   total_minor: number;
   created_at: string;
   order_items: {
@@ -54,7 +57,7 @@ export default async function StoreOrdersPage() {
   );
 
   const { data, error } = await supabase.from("orders")
-    .select("id, order_number, status, currency, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor), order_addresses(kind, recipient_name, phone, address_line1, address_line2, locality, city, region, postal_code, country_code), inventory_reservations(status, expires_at), payments(provider, status)")
+    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor), order_addresses(kind, recipient_name, phone, address_line1, address_line2, locality, city, region, postal_code, country_code), inventory_reservations(status, expires_at), payments(provider, status)")
     .eq("store_id", store.id)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -63,7 +66,10 @@ export default async function StoreOrdersPage() {
   return <main className="min-h-screen bg-[#fbf8f4] text-[#27221f]">
     <header className="border-b border-[#e8dfd7]"><div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
       <Link href="/" className="text-lg font-semibold tracking-[0.12em]">SUKOON <span className="text-[#b56e70]">IN COLOR</span></Link>
-      <Link href="/orders" className="text-sm text-[#716763] hover:text-[#a15e61]">Customer order history</Link>
+      <nav className="flex items-center gap-4 text-sm">
+        <Link href="/admin/settings/shipping" className="text-[#716763] hover:text-[#a15e61]">Shipping fee</Link>
+        <Link href="/orders" className="hidden text-[#716763] hover:text-[#a15e61] sm:inline">Customer order history</Link>
+      </nav>
     </div></header>
     <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a15e61]">Store management</p><h1 className="mt-2 text-3xl font-medium sm:text-4xl">Orders</h1>
@@ -82,7 +88,7 @@ export default async function StoreOrdersPage() {
                   <p className="mt-1 text-sm text-[#716763]">{new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.created_at))}</p>
                   {shipping && <p className="mt-3 text-sm leading-6"><strong>{shipping.recipient_name}</strong>{shipping.phone ? ` · ${shipping.phone}` : ""}<br />{shipping.address_line1}{shipping.address_line2 ? `, ${shipping.address_line2}` : ""}, {shipping.locality}, {shipping.city}, {shipping.region} {shipping.postal_code}, {shipping.country_code}</p>}
                 </div>
-                <div className="text-right"><p className="font-semibold">{formatPrice(order.total_minor, order.currency)}</p><p className="mt-1 text-xs capitalize text-[#716763]">{order.status.replaceAll("_", " ")} · {payment?.provider === "razorpay" ? `Razorpay · ${payment.status}` : "Cash on delivery"}</p></div>
+                <div className="text-right"><p className="font-semibold">{formatPrice(order.total_minor, order.currency)}</p><p className="mt-1 text-xs text-[#716763]">Items {formatPrice(order.subtotal_minor, order.currency)} · Shipping {formatPrice(order.shipping_minor, order.currency)}</p><p className="mt-1 text-xs capitalize text-[#716763]">{order.status.replaceAll("_", " ")} · {payment?.provider === "razorpay" ? `Razorpay · ${payment.status}` : "Cash on delivery"}</p></div>
               </div>
               <ul className="divide-y divide-[#f1eae5]">{order.order_items.map((item) => <li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
                 <span>{item.product_name_snapshot}{item.variant_name_snapshot ? ` · ${item.variant_name_snapshot}` : ""} <span className="text-[#716763]">× {item.quantity} · {item.sku_snapshot}</span></span><span className="whitespace-nowrap">{formatPrice(item.line_total_minor, order.currency)}</span>

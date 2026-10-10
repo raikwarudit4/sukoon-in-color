@@ -28,10 +28,17 @@ export default async function CheckoutPage() {
     return <main className="grid min-h-screen place-items-center bg-[#fbf8f4] p-6"><p>Checkout is unavailable. Please return to the collection.</p></main>;
   }
 
+  const { data: shippingFeeData, error: shippingFeeError } = await supabase.rpc("get_public_shipping_fee", { p_store_id: store.id });
+  const shippingMinor = Number(shippingFeeData);
+  if (shippingFeeError || !Number.isSafeInteger(shippingMinor) || shippingMinor < 0) {
+    return <main className="grid min-h-screen place-items-center bg-[#fbf8f4] p-6"><p>Checkout pricing is unavailable. Please try again shortly.</p></main>;
+  }
+
   const { data } = await supabase.from("carts").select("id, currency, cart_items(id, quantity, product_variants(price_minor, currency, products(name)))").eq("store_id", store.id).eq("user_id", profile.id).maybeSingle();
   const cart = data as CartForCheckout | null;
   const items = cart?.cart_items ?? [];
   const subtotal = items.reduce((sum, item) => sum + (item.product_variants?.price_minor ?? 0) * item.quantity, 0);
+  const currency = cart?.currency ?? "INR";
 
   return (
     <main className="min-h-screen bg-[#fbf8f4] text-[#27221f]">
@@ -51,8 +58,12 @@ export default async function CheckoutPage() {
             <ul className="mt-4 divide-y divide-[#eee5de]">
               {items.map((item) => <li key={item.id} className="flex justify-between gap-4 py-3 text-sm"><span>{item.product_variants?.products?.name ?? "Product"} × {item.quantity}</span><span className="whitespace-nowrap">{price((item.product_variants?.price_minor ?? 0) * item.quantity, item.product_variants?.currency ?? cart?.currency ?? "INR")}</span></li>)}
             </ul>
-            <div className="mt-2 flex justify-between border-t border-[#e8dfd7] pt-4"><span>Subtotal</span><strong>{price(subtotal, cart?.currency ?? "INR")}</strong></div>
-            <p className="mt-4 text-xs leading-5 text-[#716763]">Choose cash on delivery or secure Razorpay test checkout. Taxes and shipping are not currently added to this checkout.</p>
+            <div className="mt-2 space-y-3 border-t border-[#e8dfd7] pt-4 text-sm">
+              <div className="flex justify-between gap-4"><span className="text-[#716763]">Subtotal</span><span>{price(subtotal, currency)}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-[#716763]">Flat shipping</span><span>{price(shippingMinor, currency)}</span></div>
+              <div className="flex justify-between gap-4 border-t border-[#eee5de] pt-3 text-base"><strong>Total</strong><strong>{price(subtotal + shippingMinor, currency)}</strong></div>
+            </div>
+            <p className="mt-4 text-xs leading-5 text-[#716763]">Shipping is included in the amount charged. Taxes are not currently added to this checkout. Choose cash on delivery or secure Razorpay test checkout.</p>
           </aside>
         </div>}
       </section>

@@ -7,6 +7,9 @@ type Order = {
   order_number: string;
   status: string;
   currency: string;
+  subtotal_minor: number;
+  shipping_minor: number;
+  tax_minor: number;
   total_minor: number;
   created_at: string;
   order_items: {
@@ -44,7 +47,7 @@ export default async function OrdersPage() {
 
   const { data, error } = await supabase
     .from("orders")
-    .select("id, order_number, status, currency, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor)")
+    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor)")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: false });
 
@@ -69,6 +72,7 @@ export default async function OrdersPage() {
                 <div><p className="text-xs uppercase tracking-[0.14em] text-[#a15e61]">{order.order_number}</p>
                   <p className="mt-1 text-sm text-[#716763]">{new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.created_at))}</p></div>
                 <div className="text-right"><p className="font-semibold">{formatPrice(order.total_minor, order.currency)}</p>
+                  <p className="mt-1 text-xs text-[#716763]">Items {formatPrice(order.subtotal_minor, order.currency)} · Shipping {formatPrice(order.shipping_minor, order.currency)}</p>
                   <p className="mt-1 text-xs capitalize text-[#716763]">{order.status.replaceAll("_", " ")}</p></div>
               </div>
               <ul className="divide-y divide-[#f1eae5]">

@@ -8,7 +8,7 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/sign-in");
-  const { data } = await supabase.from("orders").select("order_number, total_minor, currency, status").eq("id", order).maybeSingle();
+  const { data } = await supabase.from("orders").select("order_number, subtotal_minor, shipping_minor, total_minor, currency, status").eq("id", order).maybeSingle();
   if (!data) notFound();
   const { data: paymentData } = await supabase.rpc("get_customer_payment_summary", { p_order_id: order });
   const payment = Array.isArray(paymentData) ? paymentData[0] : paymentData;
@@ -17,6 +17,11 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
   return <main className="grid min-h-screen place-items-center bg-[#fbf8f4] px-6 text-[#27221f]"><section className="w-full max-w-lg rounded-3xl border border-[#eee5de] bg-white p-8 text-center shadow-sm sm:p-10">
     <p className="text-4xl text-[#a15e61]">✓</p><p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#a15e61]">Order received</p>
     <h1 className="mt-2 text-3xl font-medium">Thank you for your order</h1><p className="mt-4 text-sm leading-6 text-[#716763]">Order <strong className="text-[#27221f]">{data.order_number}</strong> has been received and is pending processing. {paidOnline ? `Online payment of ${total} was captured.` : `Pay ${total} when it is delivered.`}</p>
+    <dl className="mx-auto mt-6 max-w-xs space-y-2 border-y border-[#eee5de] py-4 text-left text-sm">
+      <div className="flex justify-between gap-4"><dt className="text-[#716763]">Items</dt><dd>{new Intl.NumberFormat("en-IN", { style: "currency", currency: data.currency.trim() || "INR" }).format(data.subtotal_minor / 100)}</dd></div>
+      <div className="flex justify-between gap-4"><dt className="text-[#716763]">Shipping</dt><dd>{new Intl.NumberFormat("en-IN", { style: "currency", currency: data.currency.trim() || "INR" }).format(data.shipping_minor / 100)}</dd></div>
+      <div className="flex justify-between gap-4 border-t border-[#eee5de] pt-2 font-semibold"><dt>Total</dt><dd>{total}</dd></div>
+    </dl>
     <Link href="/" className="mt-7 inline-flex rounded-xl bg-[#a15e61] px-5 py-3 text-sm font-semibold text-white">Continue shopping</Link>
   </section></main>;
 }

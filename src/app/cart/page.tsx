@@ -69,6 +69,10 @@ export default async function CartPage() {
     );
   }
 
+  const { data: shippingFeeData, error: shippingFeeError } = await supabase.rpc("get_public_shipping_fee", { p_store_id: store.id });
+  const shippingMinor = Number(shippingFeeData);
+  const validShippingFee = !shippingFeeError && Number.isSafeInteger(shippingMinor) && shippingMinor >= 0;
+
   const { data, error } = await supabase
     .from("carts")
     .select(
@@ -108,7 +112,7 @@ export default async function CartPage() {
         </p>
         <h1 className="mt-2 text-3xl font-medium sm:text-4xl">Shopping cart</h1>
 
-        {error ? (
+        {error || !validShippingFee ? (
           <div className="mt-8 rounded-2xl border border-[#ead5d2] bg-white p-6 text-[#7c4548]">
             We could not load your cart. Please refresh and try again.
           </div>
@@ -170,9 +174,15 @@ export default async function CartPage() {
                 <span className="text-[#716763]">Subtotal</span>
                 <span className="font-semibold">{formatPrice(subtotalMinor, currency)}</span>
               </div>
-              <p className="mt-4 text-xs leading-5 text-[#716763]">
-                Shipping and taxes are shown separately if added by the store.
-              </p>
+              <div className="mt-3 flex justify-between text-sm">
+                <span className="text-[#716763]">Flat shipping</span>
+                <span>{formatPrice(shippingMinor, currency)}</span>
+              </div>
+              <div className="mt-3 flex justify-between border-t border-[#e8dfd7] pt-3 text-sm">
+                <span className="font-medium">Estimated total</span>
+                <span className="font-semibold">{formatPrice(subtotalMinor + shippingMinor, currency)}</span>
+              </div>
+              <p className="mt-4 text-xs leading-5 text-[#716763]">Taxes are not currently added to this checkout.</p>
               <Link href="/checkout" className="mt-6 block rounded-xl bg-[#a15e61] px-5 py-3 text-center text-sm font-semibold text-white hover:bg-[#884d50]">
                 Continue to checkout
               </Link>
