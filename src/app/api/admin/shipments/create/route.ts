@@ -150,8 +150,10 @@ export async function POST(request: Request) {
     weight: body.parcel.weightKg,
   };
 
+  let providerStep: "authentication" | "order creation" = "authentication";
   try {
     const token = await getShiprocketToken(mode);
+    providerStep = "order creation";
     const providerResponse = await fetch(`${getShiprocketBaseUrl(mode)}/orders/create/adhoc`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -177,9 +179,11 @@ export async function POST(request: Request) {
     if (saveError) return Response.json({ error: "Shiprocket created the order, but the shop could not save its reference. Contact the store before retrying.", providerOrderReference: reference }, { status: 502 });
     return Response.json({ shipment, alreadyCreated: false, mode });
   } catch (error) {
-    const message = error instanceof Error && error.message.includes("not configured")
-      ? error.message
-      : "Could not connect to Shiprocket. No shipment confirmation was received.";
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const message = errorMessage.includes("not configured") || errorMessage.includes("authentication failed")
+      ? errorMessage
+      : `Could not connect to Shiprocket during ${providerStep}. No shipment confirmation was received.`;
+    console.error("Shiprocket shipment request failed", { step: providerStep, error: errorMessage });
     return Response.json({ error: message }, { status: message.includes("not configured") ? 503 : 502 });
   }
 }
