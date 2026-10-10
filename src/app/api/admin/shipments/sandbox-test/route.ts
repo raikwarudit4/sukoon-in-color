@@ -20,11 +20,11 @@ export async function POST(request: Request) {
     await getShiprocketToken("sandbox");
     return Response.json({ connected: true, mode: "sandbox" });
   } catch (error) {
-    const message = error instanceof Error && error.message.includes("not configured")
+    const message = error instanceof Error && (error.message.includes("not configured")
+      || error.message.includes("authentication failed")
+      || error.message.includes("authentication returned"))
       ? error.message
-      : error instanceof Error && error.message.includes("authentication failed")
-        ? error.message
-        : "Could not connect to Shiprocket sandbox. No shipment was created.";
+      : "Could not connect to Shiprocket sandbox. No shipment was created.";
     return Response.json({ error: message }, { status: message.includes("not configured") ? 503 : 502 });
   }
 }

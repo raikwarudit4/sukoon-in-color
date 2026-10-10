@@ -180,7 +180,7 @@ export async function POST(request: Request) {
     return Response.json({ shipment, alreadyCreated: false, mode });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    const message = errorMessage.includes("not configured") || errorMessage.includes("authentication failed")
+    const message = errorMessage.includes("not configured") || errorMessage.includes("authentication failed") || errorMessage.includes("authentication returned")
       ? errorMessage
       : `Could not connect to Shiprocket during ${providerStep}. No shipment confirmation was received.`;
     console.error("Shiprocket shipment request failed", { step: providerStep, error: errorMessage });
