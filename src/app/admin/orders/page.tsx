@@ -110,7 +110,7 @@ export default async function StoreOrdersPage() {
                 <span>{item.product_name_snapshot}{item.variant_name_snapshot ? ` · ${item.variant_name_snapshot}` : ""} <span className="text-[#716763]">× {item.quantity} · {item.sku_snapshot}</span></span><span className="whitespace-nowrap">{formatPrice(item.line_total_minor, order.currency)}</span>
               </li>)}</ul>
               <div className="mt-4 border-t border-[#eee5de] pt-4"><OrderActions storeId={store.id} orderId={order.id} status={order.status} canExpire={canExpire} paymentProvider={payment?.provider ?? "cash_on_delivery"} paymentStatus={payment?.status ?? "pending"} /></div>
-              <ShipmentPanel orderId={order.id} orderStatus={order.status} shipment={order.shipments.find((item) => item.provider === "shiprocket")} />
+              <ShipmentPanel orderId={order.id} orderStatus={order.status} mode={process.env.SHIPROCKET_MODE?.trim().toLowerCase() === "mock" ? "mock" : process.env.SHIPROCKET_MODE?.trim().toLowerCase() === "sandbox" ? "sandbox" : process.env.SHIPROCKET_MODE?.trim().toLowerCase() === "live" ? "live" : "disabled"} shipment={order.shipments.find((item) => item.provider === "shiprocket")} />
             </li>;
           })}</ul>}
     </section>

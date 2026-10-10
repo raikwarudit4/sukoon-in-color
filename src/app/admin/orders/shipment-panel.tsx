@@ -17,11 +17,13 @@ type Shipment = {
   shipment_events: { status: string; detail: string | null; occurred_at: string }[];
 };
 
-export function ShipmentPanel({ orderId, orderStatus, shipment }: { orderId: string; orderStatus: string; shipment?: Shipment }) {
+export function ShipmentPanel({ orderId, orderStatus, mode, shipment }: { orderId: string; orderStatus: string; mode: "mock" | "sandbox" | "live" | "disabled"; shipment?: Shipment }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [checkingSandbox, setCheckingSandbox] = useState(false);
+  const [sandboxResult, setSandboxResult] = useState("");
   const [parcel, setParcel] = useState({ weightKg: "", lengthCm: "", breadthCm: "", heightCm: "" });
 
   async function createShipment() {
@@ -60,16 +62,38 @@ export function ShipmentPanel({ orderId, orderStatus, shipment }: { orderId: str
     finally { setSyncing(false); }
   }
 
+  async function testSandboxConnection() {
+    setCheckingSandbox(true);
+    setError("");
+    setSandboxResult("");
+    try {
+      const response = await fetch("/api/admin/shipments/sandbox-test", { method: "POST" });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) { setError(result.error ?? "Could not authenticate with Shiprocket sandbox."); return; }
+      setSandboxResult("Sandbox credentials authenticated successfully. No shipment was created.");
+    } catch {
+      setError("Could not reach the shop server. Please retry.");
+    } finally {
+      setCheckingSandbox(false);
+    }
+  }
+
+  const isSimulation = shipment?.provider_status?.startsWith("Sandbox simulation:") ?? false;
+
   return <section className="mt-4 rounded-xl border border-[#eee5de] bg-[#fffdfa] p-4" aria-label="Shipping provider">
-    <h3 className="text-sm font-semibold">Shipping</h3>
+    <h3 className="text-sm font-semibold">Shipping{mode === "mock" ? " · Mock simulation" : mode === "sandbox" ? " · Shiprocket sandbox" : mode === "live" ? " · Live provider" : " · Disabled"}</h3>
+    {mode === "sandbox" && <div className="mt-2">
+      <button type="button" disabled={checkingSandbox} onClick={testSandboxConnection} className="rounded-lg border border-[#d9c9bf] px-3 py-2 text-xs font-semibold text-[#6d4a4a] disabled:opacity-50">{checkingSandbox ? "Checking…" : "Test sandbox connection"}</button>
+      {sandboxResult && <p role="status" className="mt-2 text-xs text-green-800">{sandboxResult}</p>}
+    </div>}
     {shipment?.provider === "shiprocket" ? <div className="mt-2 space-y-1 text-xs text-[#716763]">
       <p><span className="font-semibold text-[#27221f]">Shiprocket:</span> {shipment.provider_status ?? shipment.status.replaceAll("_", " ")}</p>
       {shipment.provider_order_id && <p>Provider order ID: {shipment.provider_order_id}</p>}
       {shipment.carrier && <p>Courier: {shipment.carrier}</p>}
       {shipment.tracking_number && <p>AWB: <span className="font-semibold text-[#27221f]">{shipment.tracking_number}</span></p>}
       {shipment.tracking_url && <a className="inline-block pt-1 font-semibold text-[#a15e61] underline" href={shipment.tracking_url} target="_blank" rel="noreferrer">Open tracking</a>}
-      {!shipment.tracking_number && <p className="pt-1">Open your Shiprocket dashboard to select a courier and arrange pickup. Tracking appears here after Shiprocket assigns an AWB.</p>}
-      {!shipment.tracking_number && <button type="button" disabled={syncing} onClick={syncTracking} className="mt-2 rounded-lg border border-[#d9c9bf] px-3 py-2 text-xs font-semibold text-[#6d4a4a] disabled:opacity-50">{syncing ? "Checking…" : "Sync AWB from Shiprocket"}</button>}
+      {!shipment.tracking_number && <p className="pt-1">{isSimulation ? "This is simulated data; no courier was booked." : mode === "sandbox" ? "Use the Shiprocket sandbox panel to select a test courier and generate its sandbox AWB." : "Open your Shiprocket dashboard to select a courier and arrange pickup. Tracking appears here after Shiprocket assigns an AWB."}</p>}
+      {!shipment.tracking_number && <button type="button" disabled={syncing || mode === "disabled"} onClick={syncTracking} className="mt-2 rounded-lg border border-[#d9c9bf] px-3 py-2 text-xs font-semibold text-[#6d4a4a] disabled:opacity-50">{syncing ? "Checking…" : mode === "mock" ? "Simulate courier assignment" : "Sync AWB from Shiprocket"}</button>}
       {orderStatus === "processing" && <p className="pt-1">After the parcel is handed to the courier, use “Mark dispatched” below to commit inventory.</p>}
       {shipment.shipment_events.length > 0 && <ol className="mt-2 space-y-1 border-l border-[#e8dfd7] pl-3">
         {[...shipment.shipment_events].sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()).slice(0, 4).map((event, index) => <li key={`${event.occurred_at}-${index}`}>
@@ -77,15 +101,15 @@ export function ShipmentPanel({ orderId, orderStatus, shipment }: { orderId: str
         </li>)}
       </ol>}
     </div> : orderStatus === "processing" ? <div className="mt-2">
-      <p className="text-xs leading-5 text-[#716763]">Enter the packed parcel’s final weight and outer box dimensions. This creates the provider order; courier selection and pickup are completed in Shiprocket.</p>
+      <p className="text-xs leading-5 text-[#716763]">Enter the packed parcel’s final weight and outer box dimensions. {mode === "mock" ? "Mock mode stores a simulated order only; it does not call Shiprocket or book a courier." : mode === "sandbox" ? "Sandbox mode calls Shiprocket’s sandbox API, not the live account." : mode === "live" ? "Live mode creates a real order in Shiprocket; courier selection and pickup are completed there." : "Shipping is disabled until SHIPROCKET_MODE is configured on the server."}</p>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {([["weightKg", "Weight (kg)"], ["lengthCm", "Length (cm)"], ["breadthCm", "Width (cm)"], ["heightCm", "Height (cm)"]] as const).map(([key, label]) => <label key={key} className="text-[11px] text-[#716763]">
           {label}<input required type="number" min="0.01" max={key === "weightKg" ? "50" : "200"} step="0.01" value={parcel[key]} onChange={(event) => setParcel({ ...parcel, [key]: event.target.value })}
             className="mt-1 w-full rounded-lg border border-[#d9c9bf] bg-white px-2 py-2 text-sm text-[#27221f] outline-none focus:border-[#a15e61]" />
         </label>)}
       </div>
-      <button type="button" disabled={busy || Object.values(parcel).some((value) => !value || Number(value) <= 0)} onClick={createShipment}
-        className="mt-3 rounded-lg bg-[#a15e61] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{busy ? "Creating…" : "Create Shiprocket order"}</button>
+      <button type="button" disabled={busy || mode === "disabled" || Object.values(parcel).some((value) => !value || Number(value) <= 0)} onClick={createShipment}
+        className="mt-3 rounded-lg bg-[#a15e61] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{busy ? "Creating…" : mode === "mock" ? "Create simulated shipment" : mode === "sandbox" ? "Create sandbox shipment" : "Create Shiprocket order"}</button>
     </div> : <p className="mt-2 text-xs text-[#716763]">Create a Shiprocket order after processing begins.</p>}
     {error && <p role="alert" className="mt-2 text-xs text-[#7c4548]">{error}</p>}
   </section>;

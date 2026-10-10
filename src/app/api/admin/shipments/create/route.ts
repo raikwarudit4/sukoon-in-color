@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasAllowedRequestOrigin } from "@/lib/request-origin";
+import { getShiprocketBaseUrl, getShiprocketMode, getShiprocketToken } from "@/lib/shiprocket/mode";
 
 export const runtime = "nodejs";
 
@@ -15,21 +16,6 @@ function rupees(amountMinor: number) {
   return (amountMinor / 100).toFixed(2);
 }
 
-async function shiprocketToken() {
-  const email = process.env.SHIPROCKET_EMAIL;
-  const password = process.env.SHIPROCKET_PASSWORD;
-  if (!email || !password) throw new Error("Shiprocket credentials are not configured on the server.");
-  const response = await fetch("https://apiv2.shiprocket.in/v1/external/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-    cache: "no-store",
-  });
-  const body = await response.json().catch(() => null) as { token?: string } | null;
-  if (!response.ok || !body?.token) throw new Error("Shiprocket authentication failed. Check the server credentials.");
-  return body.token;
-}
-
 export async function POST(request: Request) {
   if (!hasAllowedRequestOrigin(request)) return Response.json({ error: "Request origin could not be verified." }, { status: 403 });
 
@@ -42,8 +28,13 @@ export async function POST(request: Request) {
     return Response.json({ error: "Enter a valid order and parcel weight and dimensions." }, { status: 400 });
   }
 
-  const pickupLocation = process.env.SHIPROCKET_PICKUP_LOCATION;
-  if (!pickupLocation) return Response.json({ error: "Set SHIPROCKET_PICKUP_LOCATION in the server environment first." }, { status: 503 });
+  const mode = getShiprocketMode();
+  if (mode === "disabled") return Response.json({ error: "Shipping integration is disabled. Set SHIPROCKET_MODE to mock, sandbox, or live on the server." }, { status: 503 });
+  const pickupLocation = mode === "sandbox" ? process.env.SHIPROCKET_SANDBOX_PICKUP_LOCATION : process.env.SHIPROCKET_PICKUP_LOCATION;
+  if (mode !== "mock" && !pickupLocation) {
+    const name = mode === "sandbox" ? "SHIPROCKET_SANDBOX_PICKUP_LOCATION" : "SHIPROCKET_PICKUP_LOCATION";
+    return Response.json({ error: `Set ${name} in the server environment first.` }, { status: 503 });
+  }
 
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -79,6 +70,22 @@ export async function POST(request: Request) {
   if (existingError) return Response.json({ error: "Could not check existing shipment data. Apply migration 059 and retry." }, { status: 503 });
   if (existing?.provider_order_id) return Response.json({ shipment: existing, alreadyCreated: true });
   if (existing) return Response.json({ error: "A shipment record already exists without a provider order. Review it in the admin panel before retrying." }, { status: 409 });
+
+  if (mode === "mock") {
+    const { data: shipment, error: saveError } = await supabase.from("shipments").insert({
+      store_id: store.id,
+      order_id: order.id,
+      provider: "shiprocket",
+      provider_order_reference: reference,
+      provider_order_id: `MOCK-ORDER-${reference}`,
+      provider_shipment_id: `MOCK-SHIPMENT-${reference}`,
+      carrier: "Sandbox simulation",
+      status: "pending",
+      provider_status: "Sandbox simulation: no Shiprocket API call or courier booking was made.",
+    }).select("id, provider_order_id, provider_shipment_id, status, provider_status").single();
+    if (saveError) return Response.json({ error: "Could not save the simulated shipment. Apply migration 059 and retry." }, { status: 503 });
+    return Response.json({ shipment, alreadyCreated: false, mode });
+  }
 
   let customerEmail = "";
   if (order.user_id) {
@@ -144,8 +151,8 @@ export async function POST(request: Request) {
   };
 
   try {
-    const token = await shiprocketToken();
-    const providerResponse = await fetch("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc", {
+    const token = await getShiprocketToken(mode);
+    const providerResponse = await fetch(`${getShiprocketBaseUrl(mode)}/orders/create/adhoc`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(requestData),
@@ -168,7 +175,7 @@ export async function POST(request: Request) {
       provider_status: "Order created; courier selection required in Shiprocket.",
     }).select("id, provider_order_id, provider_shipment_id, status, provider_status").single();
     if (saveError) return Response.json({ error: "Shiprocket created the order, but the shop could not save its reference. Contact the store before retrying.", providerOrderReference: reference }, { status: 502 });
-    return Response.json({ shipment, alreadyCreated: false });
+    return Response.json({ shipment, alreadyCreated: false, mode });
   } catch (error) {
     const message = error instanceof Error && error.message.includes("not configured")
       ? error.message

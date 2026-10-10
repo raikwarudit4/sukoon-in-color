@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { hasAllowedRequestOrigin } from "@/lib/request-origin";
+import { getShiprocketBaseUrl, getShiprocketMode, getShiprocketToken } from "@/lib/shiprocket/mode";
 
 export const runtime = "nodejs";
 
@@ -9,19 +10,6 @@ type ProviderOrder = {
     id?: number | string; awb?: string; awb_code?: string; courier?: string; courier_name?: string;
   };
 };
-
-async function getToken() {
-  const email = process.env.SHIPROCKET_EMAIL;
-  const password = process.env.SHIPROCKET_PASSWORD;
-  if (!email || !password) throw new Error("Shiprocket credentials are not configured on the server.");
-  const response = await fetch("https://apiv2.shiprocket.in/v1/external/auth/login", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }), cache: "no-store",
-  });
-  const result = await response.json().catch(() => null) as { token?: string } | null;
-  if (!response.ok || !result?.token) throw new Error("Shiprocket authentication failed. Check the server credentials.");
-  return result.token;
-}
 
 export async function POST(request: Request) {
   if (!hasAllowedRequestOrigin(request)) return Response.json({ error: "Request origin could not be verified." }, { status: 403 });
@@ -43,9 +31,27 @@ export async function POST(request: Request) {
   if (shipmentError || !shipment) return Response.json({ error: "Shiprocket order not found." }, { status: 404 });
   if (shipment.tracking_number) return Response.json({ shipment, alreadySynced: true });
 
+  const mode = getShiprocketMode();
+  if (mode === "disabled") return Response.json({ error: "Shipping integration is disabled. Set SHIPROCKET_MODE to mock, sandbox, or live on the server." }, { status: 503 });
+  if (mode === "mock") {
+    const awb = `TEST${shipment.provider_order_reference.slice(-17)}`;
+    const { data: updated, error: updateError } = await supabase.from("shipments").update({
+      tracking_number: awb,
+      carrier: "Sandbox demo courier",
+      tracking_url: null,
+      status: "labelled",
+      provider_status: "Sandbox simulation: fake AWB assigned; no courier booking was made.",
+      tracking_updated_at: new Date().toISOString(),
+    }).eq("id", shipment.id).eq("store_id", store.id)
+      .select("id, provider, provider_order_id, provider_shipment_id, carrier, tracking_number, status, provider_status, tracking_url, tracking_updated_at")
+      .single();
+    if (updateError) return Response.json({ error: "Could not save the simulated AWB. Refresh and retry." }, { status: 503 });
+    return Response.json({ shipment: updated, mode });
+  }
+
   try {
-    const token = await getToken();
-    const response = await fetch(`https://apiv2.shiprocket.in/v1/external/orders?search=${encodeURIComponent(shipment.provider_order_reference)}`, {
+    const token = await getShiprocketToken(mode);
+    const response = await fetch(`${getShiprocketBaseUrl(mode)}/orders?search=${encodeURIComponent(shipment.provider_order_reference)}`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, cache: "no-store",
     });
     const result = await response.json().catch(() => null) as { data?: ProviderOrder[] } | null;
@@ -68,7 +74,7 @@ export async function POST(request: Request) {
       .select("id, provider, provider_order_id, provider_shipment_id, carrier, tracking_number, status, provider_status, tracking_url, tracking_updated_at")
       .single();
     if (updateError) return Response.json({ error: "AWB found, but the shop could not save tracking details. Refresh and retry." }, { status: 503 });
-    return Response.json({ shipment: updated });
+    return Response.json({ shipment: updated, mode });
   } catch (error) {
     const message = error instanceof Error && error.message.includes("not configured") ? error.message : "Could not connect to Shiprocket.";
     return Response.json({ error: message }, { status: message.includes("not configured") ? 503 : 502 });
