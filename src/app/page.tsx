@@ -87,7 +87,7 @@ export default async function Home({
             SUKOON <span className="text-[#b56e70]">IN COLOR</span>
           </Link>
           <div className="flex items-center gap-6">
-            <span className="hidden text-sm text-[#716763] sm:inline">
+            <span className="hidden text-sm text-[#716763] lg:inline">
               A little color, a little calm.
             </span>
             <AccountNav />

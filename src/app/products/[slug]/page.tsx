@@ -76,7 +76,7 @@ export default async function ProductPage({
             SUKOON <span className="text-[#b56e70]">IN COLOR</span>
           </Link>
           <div className="flex items-center gap-5">
-            <Link href="/" className="text-sm text-[#716763] hover:text-[#a15e61]">
+            <Link href="/" className="hidden text-sm text-[#716763] hover:text-[#a15e61] sm:inline">
               Back to collection
             </Link>
             <AccountNav />
