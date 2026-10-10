@@ -45,10 +45,11 @@ export default async function ProductPage({
   const { data, error } = await supabase
     .from("products")
     .select(
-      "id, store_id, name, slug, description, stores!inner(slug), product_media(id, url, alt_text, sort_order), product_variants(id, title, sku, price_minor, currency)",
+      "id, store_id, name, slug, description, stores!inner(slug), product_media(id, url, alt_text, sort_order), product_variants!inner(id, title, sku, price_minor, currency)",
     )
     .eq("slug", slug)
     .eq("status", "active")
+    .eq("product_variants.is_active", true)
     .eq("stores.slug", "sukoon-in-color")
     .maybeSingle();
 

@@ -60,9 +60,10 @@ export default async function Home({
   let productsQuery = supabase
     .from("products")
     .select(
-      "id, name, slug, description, category_id, created_at, categories(name, slug), stores!inner(slug), product_media(id, url, alt_text, sort_order), product_variants(id, title, price_minor, currency)",
+      "id, name, slug, description, category_id, created_at, categories(name, slug), stores!inner(slug), product_media(id, url, alt_text, sort_order), product_variants!inner(id, title, price_minor, currency)",
     )
     .eq("status", "active")
+    .eq("product_variants.is_active", true)
     .eq("stores.slug", "sukoon-in-color")
     .order("created_at", { ascending: false })
     .limit(100);
