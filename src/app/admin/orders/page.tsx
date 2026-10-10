@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { OrderActions } from "./order-actions";
+import { ShipmentPanel } from "./shipment-panel";
 
 type StoreOrder = {
   id: string;
@@ -35,6 +36,19 @@ type StoreOrder = {
   }[];
   inventory_reservations: { status: string; expires_at: string }[];
   payments: { provider: string; status: string }[];
+  shipments: {
+    id: string;
+    provider: string | null;
+    provider_order_id: string | null;
+    provider_shipment_id: string | null;
+    carrier: string | null;
+    tracking_number: string | null;
+    status: string;
+    provider_status: string | null;
+    tracking_url: string | null;
+    tracking_updated_at: string | null;
+    shipment_events: { status: string; detail: string | null; occurred_at: string }[];
+  }[];
 };
 
 function formatPrice(amountMinor: number, currency: string) {
@@ -57,7 +71,7 @@ export default async function StoreOrdersPage() {
   );
 
   const { data, error } = await supabase.from("orders")
-    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor), order_addresses(kind, recipient_name, phone, address_line1, address_line2, locality, city, region, postal_code, country_code), inventory_reservations(status, expires_at), payments(provider, status)")
+    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor), order_addresses(kind, recipient_name, phone, address_line1, address_line2, locality, city, region, postal_code, country_code), inventory_reservations(status, expires_at), payments(provider, status), shipments(id, provider, provider_order_id, provider_shipment_id, carrier, tracking_number, status, provider_status, tracking_url, tracking_updated_at, shipment_events(status, detail, occurred_at))")
     .eq("store_id", store.id)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -96,6 +110,7 @@ export default async function StoreOrdersPage() {
                 <span>{item.product_name_snapshot}{item.variant_name_snapshot ? ` · ${item.variant_name_snapshot}` : ""} <span className="text-[#716763]">× {item.quantity} · {item.sku_snapshot}</span></span><span className="whitespace-nowrap">{formatPrice(item.line_total_minor, order.currency)}</span>
               </li>)}</ul>
               <div className="mt-4 border-t border-[#eee5de] pt-4"><OrderActions storeId={store.id} orderId={order.id} status={order.status} canExpire={canExpire} paymentProvider={payment?.provider ?? "cash_on_delivery"} paymentStatus={payment?.status ?? "pending"} /></div>
+              <ShipmentPanel orderId={order.id} orderStatus={order.status} shipment={order.shipments.find((item) => item.provider === "shiprocket")} />
             </li>;
           })}</ul>}
     </section>

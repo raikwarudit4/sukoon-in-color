@@ -12,6 +12,16 @@ type Order = {
   tax_minor: number;
   total_minor: number;
   created_at: string;
+  shipments: {
+    provider: string | null;
+    carrier: string | null;
+    tracking_number: string | null;
+    status: string;
+    provider_status: string | null;
+    tracking_url: string | null;
+    tracking_updated_at: string | null;
+    shipment_events: { status: string; detail: string | null; occurred_at: string }[];
+  }[];
   order_items: {
     id: string;
     product_name_snapshot: string;
@@ -47,7 +57,7 @@ export default async function OrdersPage() {
 
   const { data, error } = await supabase
     .from("orders")
-    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor)")
+    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor), shipments(provider, carrier, tracking_number, status, provider_status, tracking_url, tracking_updated_at, shipment_events(status, detail, occurred_at))")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: false });
 
@@ -68,6 +78,17 @@ export default async function OrdersPage() {
             <Link href="/" className="mt-5 inline-flex rounded-xl bg-[#a15e61] px-5 py-3 text-sm font-semibold text-white">Browse the collection</Link>
           </div> : <ul className="mt-8 space-y-5">
             {orders.map((order) => <li key={order.id} className="rounded-2xl border border-[#eee5de] bg-white p-5 sm:p-7">
+              {(() => {
+                const shipment = order.shipments.find((item) => item.provider === "shiprocket");
+                return shipment ? <div className="mb-4 rounded-xl border border-[#eee5de] bg-[#fffdfa] p-4 text-sm">
+                  <p className="font-semibold">Delivery tracking</p>
+                  <p className="mt-1 capitalize text-[#716763]">{shipment.provider_status ?? shipment.status.replaceAll("_", " ")}</p>
+                  {shipment.carrier && <p className="mt-1 text-xs text-[#716763]">Courier: {shipment.carrier}</p>}
+                  {shipment.tracking_number && <p className="mt-1 text-xs text-[#716763]">Tracking number: {shipment.tracking_number}</p>}
+                  {shipment.tracking_url && <a href={shipment.tracking_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm font-semibold text-[#a15e61] underline">Track parcel</a>}
+                  {shipment.shipment_events.length > 0 && <ol className="mt-3 space-y-1 text-xs text-[#716763]">{[...shipment.shipment_events].sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()).slice(0, 3).map((event, index) => <li key={`${event.occurred_at}-${index}`}>{event.detail ?? event.status} · {new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(event.occurred_at))}</li>)}</ol>}
+                </div> : null;
+              })()}
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#eee5de] pb-4">
                 <div><p className="text-xs uppercase tracking-[0.14em] text-[#a15e61]">{order.order_number}</p>
                   <p className="mt-1 text-sm text-[#716763]">{new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.created_at))}</p></div>

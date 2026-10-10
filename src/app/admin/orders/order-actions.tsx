@@ -16,7 +16,7 @@ const actionsByStatus: Record<string, Action[]> = {
     { value: "cancel", label: "Cancel", danger: true },
   ],
   processing: [
-    { value: "ship", label: "Ship order" },
+    { value: "ship", label: "Mark dispatched" },
     { value: "cancel", label: "Cancel", danger: true },
   ],
   shipped: [{ value: "deliver", label: "Mark delivered + cash received" }],
