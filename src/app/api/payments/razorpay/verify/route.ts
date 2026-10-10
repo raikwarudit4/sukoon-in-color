@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
+import { hasAllowedRequestOrigin } from "@/lib/request-origin";
 
 export const runtime = "nodejs";
 
@@ -13,8 +14,7 @@ type PaymentContext = {
 };
 
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) {
+  if (!hasAllowedRequestOrigin(request)) {
     return Response.json({ error: "Request origin could not be verified." }, { status: 403 });
   }
 
