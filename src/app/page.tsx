@@ -91,7 +91,6 @@ export default async function Home({
               A little color, a little calm.
             </span>
             <AccountNav />
-            <Link href="/cart" className="text-sm font-medium text-[#716763] hover:text-[#a15e61]">Cart</Link>
           </div>
         </div>
       </header>
