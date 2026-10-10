@@ -72,7 +72,7 @@ export default async function StoreOrdersPage() {
       </nav>
     </div></header>
     <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a15e61]">Store management</p><h1 className="mt-2 text-3xl font-medium sm:text-4xl">Orders</h1>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a15e61]">Store management</p><div className="mt-2 flex flex-wrap items-baseline justify-between gap-3"><h1 className="text-3xl font-medium sm:text-4xl">Orders</h1><Link href="/admin/reviews" className="text-sm font-semibold text-[#a15e61] underline underline-offset-4">Review moderation</Link></div>
       {error ? <div className="mt-8 rounded-2xl border border-[#ead5d2] bg-white p-6 text-[#7c4548]">Could not load store orders. Apply the latest database migration, then refresh.</div>
         : orders.length === 0 ? <div className="mt-8 rounded-2xl border border-dashed border-[#d9c9bf] bg-white/70 p-12 text-center text-sm text-[#716763]">No orders yet.</div>
           : <ul className="mt-8 space-y-5">{orders.map((order) => {
