@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 type Shipment = {
@@ -22,9 +22,12 @@ export function ShipmentPanel({ orderId, orderStatus, mode, shipment }: { orderI
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
-  const [checkingSandbox, setCheckingSandbox] = useState(false);
-  const [sandboxResult, setSandboxResult] = useState("");
+  const [checkingConnection, setCheckingConnection] = useState(false);
+  const [connectionResult, setConnectionResult] = useState("");
   const [parcel, setParcel] = useState({ weightKg: "", lengthCm: "", breadthCm: "", heightCm: "" });
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualDetails, setManualDetails] = useState({ providerOrderId: "", providerShipmentId: "", carrier: "", trackingNumber: "", trackingUrl: "" });
 
   async function createShipment() {
     setBusy(true);
@@ -62,19 +65,43 @@ export function ShipmentPanel({ orderId, orderStatus, mode, shipment }: { orderI
     finally { setSyncing(false); }
   }
 
-  async function testSandboxConnection() {
-    setCheckingSandbox(true);
+  async function testProviderConnection() {
+    setCheckingConnection(true);
     setError("");
-    setSandboxResult("");
+    setConnectionResult("");
     try {
-      const response = await fetch("/api/admin/shipments/sandbox-test", { method: "POST" });
-      const result = await response.json() as { error?: string };
-      if (!response.ok) { setError(result.error ?? "Could not authenticate with Shiprocket sandbox."); return; }
-      setSandboxResult("Sandbox credentials authenticated successfully. No shipment was created.");
+      const response = await fetch("/api/admin/shipments/connection-test", { method: "POST" });
+      const result = await response.json() as { error?: string; mode?: "sandbox" | "live" };
+      if (!response.ok) { setError(result.error ?? `Could not authenticate with Shiprocket ${mode}.`); return; }
+      setConnectionResult(`${result.mode === "live" ? "Live" : "Sandbox"} credentials authenticated successfully. No shipment was created.`);
     } catch {
       setError("Could not reach the shop server. Please retry.");
     } finally {
-      setCheckingSandbox(false);
+      setCheckingConnection(false);
+    }
+  }
+
+  async function saveManualShipment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setManualSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/shipments/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, ...manualDetails }),
+      });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) {
+        setError(result.error ?? "Could not save the manual shipment details.");
+        return;
+      }
+      setManualOpen(false);
+      router.refresh();
+    } catch {
+      setError("Could not reach the shop server. Please retry.");
+    } finally {
+      setManualSaving(false);
     }
   }
 
@@ -82,9 +109,9 @@ export function ShipmentPanel({ orderId, orderStatus, mode, shipment }: { orderI
 
   return <section className="mt-4 rounded-xl border border-[#eee5de] bg-[#fffdfa] p-4" aria-label="Shipping provider">
     <h3 className="text-sm font-semibold">Shipping{mode === "mock" ? " · Mock simulation" : mode === "sandbox" ? " · Shiprocket sandbox" : mode === "live" ? " · Live provider" : " · Disabled"}</h3>
-    {mode === "sandbox" && <div className="mt-2">
-      <button type="button" disabled={checkingSandbox} onClick={testSandboxConnection} className="rounded-lg border border-[#d9c9bf] px-3 py-2 text-xs font-semibold text-[#6d4a4a] disabled:opacity-50">{checkingSandbox ? "Checking…" : "Test sandbox connection"}</button>
-      {sandboxResult && <p role="status" className="mt-2 text-xs text-green-800">{sandboxResult}</p>}
+    {(mode === "sandbox" || mode === "live") && <div className="mt-2">
+      <button type="button" disabled={checkingConnection} onClick={testProviderConnection} className="rounded-lg border border-[#d9c9bf] px-3 py-2 text-xs font-semibold text-[#6d4a4a] disabled:opacity-50">{checkingConnection ? "Checking…" : `Test ${mode === "live" ? "live" : "sandbox"} connection`}</button>
+      {connectionResult && <p role="status" className="mt-2 text-xs text-green-800">{connectionResult}</p>}
     </div>}
     {shipment?.provider === "shiprocket" ? <div className="mt-2 space-y-1 text-xs text-[#716763]">
       <p><span className="font-semibold text-[#27221f]">Shiprocket:</span> {shipment.provider_status ?? shipment.status.replaceAll("_", " ")}</p>
@@ -111,6 +138,19 @@ export function ShipmentPanel({ orderId, orderStatus, mode, shipment }: { orderI
       <button type="button" disabled={busy || mode === "disabled" || Object.values(parcel).some((value) => !value || Number(value) <= 0)} onClick={createShipment}
         className="mt-3 rounded-lg bg-[#a15e61] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{busy ? "Creating…" : mode === "mock" ? "Create simulated shipment" : mode === "sandbox" ? "Create sandbox shipment" : "Create Shiprocket order"}</button>
     </div> : <p className="mt-2 text-xs text-[#716763]">Create a Shiprocket order after processing begins.</p>}
+    {mode === "live" && orderStatus === "processing" && !shipment?.tracking_number && <div className="mt-3 border-t border-[#eee5de] pt-3">
+      <p className="text-xs leading-5 text-[#716763]">If you book the shipment directly in the Shiprocket dashboard, enter its assigned courier and AWB here. This records tracking in the shop but does not create or book the shipment with Shiprocket.</p>
+      <button type="button" onClick={() => setManualOpen(!manualOpen)} className="mt-2 rounded-lg border border-[#d9c9bf] px-3 py-2 text-xs font-semibold text-[#6d4a4a]">{manualOpen ? "Close manual entry" : "Enter Shiprocket booking manually"}</button>
+      {manualOpen && <form onSubmit={saveManualShipment} className="mt-3 space-y-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {([ ["providerOrderId", "Shiprocket order ID (optional)"], ["providerShipmentId", "Shiprocket shipment ID (optional)"], ["carrier", "Courier name"], ["trackingNumber", "AWB / tracking number"] ] as const).map(([key, label]) => <label key={key} className="text-[11px] text-[#716763]">
+            {label}<input required={key === "carrier" || key === "trackingNumber"} maxLength={key === "carrier" ? 120 : key === "trackingNumber" ? 80 : 100} value={manualDetails[key]} onChange={(inputEvent) => setManualDetails({ ...manualDetails, [key]: inputEvent.target.value })} className="mt-1 w-full rounded-lg border border-[#d9c9bf] bg-white px-2 py-2 text-sm text-[#27221f] outline-none focus:border-[#a15e61]" />
+          </label>)}
+        </div>
+        <label className="block text-[11px] text-[#716763]">Tracking URL (optional, HTTPS)<input type="url" value={manualDetails.trackingUrl} onChange={(inputEvent) => setManualDetails({ ...manualDetails, trackingUrl: inputEvent.target.value })} placeholder="https://…" className="mt-1 w-full rounded-lg border border-[#d9c9bf] bg-white px-2 py-2 text-sm text-[#27221f] outline-none focus:border-[#a15e61]" /></label>
+        <button type="submit" disabled={manualSaving || !manualDetails.carrier.trim() || !manualDetails.trackingNumber.trim()} className="rounded-lg bg-[#a15e61] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{manualSaving ? "Saving…" : "Save tracking details"}</button>
+      </form>}
+    </div>}
     {error && <p role="alert" className="mt-2 text-xs text-[#7c4548]">{error}</p>}
   </section>;
 }

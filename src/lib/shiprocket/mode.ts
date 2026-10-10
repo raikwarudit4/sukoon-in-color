@@ -31,7 +31,10 @@ export async function getShiprocketToken(mode: "sandbox" | "live") {
     cache: "no-store",
   });
   const body = await response.json().catch(() => null) as { token?: string } | null;
-  if (!response.ok) throw new Error(`Shiprocket authentication failed (HTTP ${response.status}). Check the selected environment credentials and sandbox API access.`);
+  if (!response.ok) {
+    const accessLabel = mode === "sandbox" ? "sandbox API access" : "live API access";
+    throw new Error(`Shiprocket authentication failed (HTTP ${response.status}). Check the selected environment credentials and ${accessLabel}.`);
+  }
   if (!body?.token) throw new Error(`Shiprocket authentication returned HTTP ${response.status} without a token field.`);
   return body.token;
 }

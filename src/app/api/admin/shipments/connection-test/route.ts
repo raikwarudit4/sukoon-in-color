@@ -6,7 +6,10 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   if (!hasAllowedRequestOrigin(request)) return Response.json({ error: "Request origin could not be verified." }, { status: 403 });
-  if (getShiprocketMode() !== "sandbox") return Response.json({ error: "Set SHIPROCKET_MODE=sandbox to test sandbox credentials." }, { status: 409 });
+  const mode = getShiprocketMode();
+  if (mode !== "sandbox" && mode !== "live") {
+    return Response.json({ error: "Set SHIPROCKET_MODE to sandbox or live to test provider credentials." }, { status: 409 });
+  }
 
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -17,14 +20,14 @@ export async function POST(request: Request) {
   if (isMember !== true) return Response.json({ error: "Store membership is required." }, { status: 403 });
 
   try {
-    await getShiprocketToken("sandbox");
-    return Response.json({ connected: true, mode: "sandbox" });
+    await getShiprocketToken(mode);
+    return Response.json({ connected: true, mode });
   } catch (error) {
     const message = error instanceof Error && (error.message.includes("not configured")
       || error.message.includes("authentication failed")
       || error.message.includes("authentication returned"))
       ? error.message
-      : "Could not connect to Shiprocket sandbox. No shipment was created.";
+      : `Could not connect to Shiprocket ${mode}. No shipment was created.`;
     return Response.json({ error: message }, { status: message.includes("not configured") ? 503 : 502 });
   }
 }
