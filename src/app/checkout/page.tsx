@@ -52,7 +52,7 @@ export default async function CheckoutPage() {
               {items.map((item) => <li key={item.id} className="flex justify-between gap-4 py-3 text-sm"><span>{item.product_variants?.products?.name ?? "Product"} × {item.quantity}</span><span className="whitespace-nowrap">{price((item.product_variants?.price_minor ?? 0) * item.quantity, item.product_variants?.currency ?? cart?.currency ?? "INR")}</span></li>)}
             </ul>
             <div className="mt-2 flex justify-between border-t border-[#e8dfd7] pt-4"><span>Subtotal</span><strong>{price(subtotal, cart?.currency ?? "INR")}</strong></div>
-            <p className="mt-4 text-xs leading-5 text-[#716763]">Payment is collected on delivery. Taxes and shipping are not currently added to this checkout.</p>
+            <p className="mt-4 text-xs leading-5 text-[#716763]">Choose cash on delivery or secure Razorpay test checkout. Taxes and shipping are not currently added to this checkout.</p>
           </aside>
         </div>}
       </section>

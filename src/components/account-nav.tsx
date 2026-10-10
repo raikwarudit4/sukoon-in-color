@@ -8,19 +8,37 @@ import { createClient } from "@/lib/supabase/client";
 export function AccountNav() {
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
+  const [canManageOrders, setCanManageOrders] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
     let isMounted = true;
 
+    async function syncAccount(user: { id: string; email?: string } | null) {
+      if (!isMounted) return;
+      setEmail(user?.email ?? null);
+      if (!user) {
+        setCanManageOrders(false);
+        return;
+      }
+      const { data: store } = await supabase.from("stores").select("id").eq("slug", "sukoon-in-color").eq("status", "active").maybeSingle();
+      if (!store) {
+        if (isMounted) setCanManageOrders(false);
+        return;
+      }
+      const { data: member, error } = await supabase.rpc("is_store_member", { target_store: store.id });
+      if (isMounted) setCanManageOrders(!error && member === true);
+    }
+
     supabase.auth.getUser().then(({ data, error }) => {
-      if (isMounted) setEmail(error ? null : (data.user?.email ?? null));
+      void syncAccount(error ? null : (data.user ? { id: data.user.id, email: data.user.email } : null));
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setEmail(session?.user.email ?? null);
+      const nextUser = session?.user ? { id: session.user.id, email: session.user.email } : null;
+      setTimeout(() => void syncAccount(nextUser), 0);
     });
 
     return () => {
@@ -43,6 +61,7 @@ export function AccountNav() {
       </Link>
       {email ? (
         <>
+          {canManageOrders && <Link href="/admin/orders" className="text-[#716763] hover:text-[#a15e61]">Manage orders</Link>}
           <Link href="/orders" className="text-[#716763] hover:text-[#a15e61]">Orders</Link>
           <button
             type="button"
