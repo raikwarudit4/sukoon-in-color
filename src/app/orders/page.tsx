@@ -113,7 +113,8 @@ export default async function OrdersPage() {
                   <p className="mt-1 text-sm text-[#716763]">{new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.created_at))}</p></div>
                 <div className="text-right"><p className="font-semibold">{formatPrice(order.total_minor, order.currency)}</p>
                   <p className="mt-1 text-xs text-[#716763]">Items {formatPrice(order.subtotal_minor, order.currency)} · Shipping {formatPrice(order.shipping_minor, order.currency)}</p>
-                  <p className="mt-1 text-xs capitalize text-[#716763]">{order.status.replaceAll("_", " ")}</p></div>
+                  <p className="mt-1 text-xs capitalize text-[#716763]">{order.status.replaceAll("_", " ")}</p>
+                  <Link href={`/orders/${order.id}/receipt`} className="mt-2 inline-block text-xs font-semibold text-[#a15e61] underline underline-offset-4">View receipt</Link></div>
               </div>
               <ul className="divide-y divide-[#f1eae5]">
                 {order.order_items.map((item) => <li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
