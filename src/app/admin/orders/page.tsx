@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { OrderActions } from "./order-actions";
 import { ShipmentPanel } from "./shipment-panel";
+import { ReturnRequestActions } from "./return-request-actions";
+import { ReturnEvidence } from "@/app/orders/return-evidence";
 
 type StoreOrder = {
   id: string;
@@ -49,6 +51,14 @@ type StoreOrder = {
     tracking_updated_at: string | null;
     shipment_events: { status: string; detail: string | null; occurred_at: string }[];
   }[];
+  returns: {
+    id: string;
+    status: string;
+    reason: string;
+    created_at: string;
+    evidence: string[];
+    return_items: { quantity: number; order_item_id: string }[];
+  }[];
 };
 
 function formatPrice(amountMinor: number, currency: string) {
@@ -71,7 +81,7 @@ export default async function StoreOrdersPage() {
   );
 
   const { data, error } = await supabase.from("orders")
-    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor), order_addresses(kind, recipient_name, phone, address_line1, address_line2, locality, city, region, postal_code, country_code), inventory_reservations(status, expires_at), payments(provider, status), shipments(id, provider, provider_order_id, provider_shipment_id, carrier, tracking_number, status, provider_status, tracking_url, tracking_updated_at, shipment_events(status, detail, occurred_at))")
+    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor), order_addresses(kind, recipient_name, phone, address_line1, address_line2, locality, city, region, postal_code, country_code), inventory_reservations(status, expires_at), payments(provider, status), shipments(id, provider, provider_order_id, provider_shipment_id, carrier, tracking_number, status, provider_status, tracking_url, tracking_updated_at, shipment_events(status, detail, occurred_at)), returns(id, status, reason, created_at, evidence, return_items(quantity, order_item_id))")
     .eq("store_id", store.id)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -84,6 +94,7 @@ export default async function StoreOrdersPage() {
         <Link href="/admin/products" className="text-[#716763] hover:text-[#a15e61]">Products</Link>
         <Link href="/admin/reviews" className="text-[#716763] hover:text-[#a15e61]">Reviews</Link>
         <Link href="/admin/settings/shipping" className="text-[#716763] hover:text-[#a15e61]">Shipping fee</Link>
+        <Link href="/admin/settings/returns" className="text-[#716763] hover:text-[#a15e61]">Returns</Link>
         <Link href="/orders" className="hidden text-[#716763] hover:text-[#a15e61] sm:inline">Customer order history</Link>
       </nav>
     </div></header>
@@ -109,6 +120,16 @@ export default async function StoreOrdersPage() {
               <ul className="divide-y divide-[#f1eae5]">{order.order_items.map((item) => <li key={item.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
                 <span>{item.product_name_snapshot}{item.variant_name_snapshot ? ` · ${item.variant_name_snapshot}` : ""} <span className="text-[#716763]">× {item.quantity} · {item.sku_snapshot}</span></span><span className="whitespace-nowrap">{formatPrice(item.line_total_minor, order.currency)}</span>
               </li>)}</ul>
+              {order.returns.map((returnRequest) => <div key={returnRequest.id} className="mt-4 rounded-xl border border-[#ead5d2] bg-[#fffdfa] p-4 text-sm">
+                <p className="font-semibold">Return request · <span className="capitalize">{returnRequest.status.replaceAll("_", " ")}</span></p>
+                <p className="mt-1 text-xs text-[#716763]">{returnRequest.reason}</p>
+                <ReturnEvidence paths={returnRequest.evidence ?? []} />
+                <ul className="mt-2 space-y-1 text-xs text-[#716763]">{returnRequest.return_items.map((line) => {
+                  const item = order.order_items.find((candidate) => candidate.id === line.order_item_id);
+                  return <li key={line.order_item_id}>{item?.product_name_snapshot ?? "Order item"} × {line.quantity}</li>;
+                })}</ul>
+                {returnRequest.status === "requested" && <ReturnRequestActions returnId={returnRequest.id} />}
+              </div>)}
               <div className="mt-4 border-t border-[#eee5de] pt-4"><OrderActions storeId={store.id} orderId={order.id} status={order.status} canExpire={canExpire} paymentProvider={payment?.provider ?? "cash_on_delivery"} paymentStatus={payment?.status ?? "pending"} /></div>
               <ShipmentPanel orderId={order.id} orderStatus={order.status} mode={process.env.SHIPROCKET_MODE?.trim().toLowerCase() === "mock" ? "mock" : process.env.SHIPROCKET_MODE?.trim().toLowerCase() === "sandbox" ? "sandbox" : process.env.SHIPROCKET_MODE?.trim().toLowerCase() === "live" ? "live" : "disabled"} shipment={order.shipments.find((item) => item.provider === "shiprocket")} />
             </li>;

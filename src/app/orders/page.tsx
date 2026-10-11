@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ReturnRequestForm } from "./return-request-form";
+import { ReturnEvidence } from "./return-evidence";
 
 type Order = {
   id: string;
@@ -30,6 +32,14 @@ type Order = {
     quantity: number;
     line_total_minor: number;
   }[];
+  returns: {
+    id: string;
+    status: string;
+    reason: string;
+    created_at: string;
+    evidence: string[];
+    return_items: { order_item_id: string; quantity: number }[];
+  }[];
 };
 
 function formatPrice(amountMinor: number, currency: string) {
@@ -55,9 +65,18 @@ export default async function OrdersPage() {
     return <main className="grid min-h-screen place-items-center bg-[#fbf8f4] px-6 text-[#27221f]"><p>Your account profile could not be found.</p></main>;
   }
 
+  const { data: store } = await supabase.from("stores").select("id")
+    .eq("slug", "sukoon-in-color").eq("status", "active").maybeSingle();
+  const { data: returnsEnabled, error: returnsSettingError } = store
+    ? await supabase.rpc("get_store_returns_enabled", { p_store_id: store.id })
+    : { data: false, error: new Error("Store unavailable") };
+  const { data: supportEmail } = store
+    ? await supabase.rpc("get_store_customer_support_email", { p_store_id: store.id })
+    : { data: null };
+
   const { data, error } = await supabase
     .from("orders")
-    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor), shipments(provider, carrier, tracking_number, status, provider_status, tracking_url, tracking_updated_at, shipment_events(status, detail, occurred_at))")
+    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor), returns(id, status, reason, created_at, evidence, return_items(order_item_id, quantity)), shipments(provider, carrier, tracking_number, status, provider_status, tracking_url, tracking_updated_at, shipment_events(status, detail, occurred_at))")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: false });
 
@@ -80,7 +99,7 @@ export default async function OrdersPage() {
             {orders.map((order) => <li key={order.id} className="rounded-2xl border border-[#eee5de] bg-white p-5 sm:p-7">
               {(() => {
                 const shipment = order.shipments.find((item) => item.provider === "shiprocket");
-                return shipment ? <div className="mb-4 rounded-xl border border-[#eee5de] bg-[#fffdfa] p-4 text-sm">
+                return shipment && ["shipped", "delivered"].includes(order.status) ? <div className="mb-4 rounded-xl border border-[#eee5de] bg-[#fffdfa] p-4 text-sm">
                   <p className="font-semibold">Delivery tracking</p>
                   <p className="mt-1 capitalize text-[#716763]">{shipment.provider_status ?? shipment.status.replaceAll("_", " ")}</p>
                   {shipment.carrier && <p className="mt-1 text-xs text-[#716763]">Courier: {shipment.carrier}</p>}
@@ -102,6 +121,31 @@ export default async function OrdersPage() {
                   <span className="whitespace-nowrap">{formatPrice(item.line_total_minor, order.currency)}</span>
                 </li>)}
               </ul>
+              {order.returns.map((returnRequest) => <div key={returnRequest.id} className="mt-4 rounded-xl border border-[#eee5de] bg-[#fffdfa] p-4 text-sm">
+                <p className="font-semibold">Return request · <span className="capitalize">{returnRequest.status.replaceAll("_", " ")}</span></p>
+                <p className="mt-1 text-xs text-[#716763]">{returnRequest.reason}</p>
+                <ReturnEvidence paths={returnRequest.evidence ?? []} />
+                <ul className="mt-2 space-y-1 text-xs text-[#716763]">{returnRequest.return_items.map((line) => {
+                  const item = order.order_items.find((candidate) => candidate.id === line.order_item_id);
+                  return <li key={line.order_item_id}>{item?.product_name_snapshot ?? "Order item"} × {line.quantity}</li>;
+                })}</ul>
+              </div>)}
+              {returnsEnabled === true && !returnsSettingError && order.status === "delivered" && !order.returns.some((entry) => ["requested", "approved", "received", "rejected"].includes(entry.status)) && <ReturnRequestForm
+                orderId={order.id}
+                userId={profile.id}
+                items={order.order_items.map((item) => ({
+                  id: item.id,
+                  name: item.product_name_snapshot + (item.variant_name_snapshot ? ` · ${item.variant_name_snapshot}` : ""),
+                  quantity: item.quantity,
+                }))}
+              />}
+              {order.returns.some((entry) => entry.status === "rejected") && <div className="mt-4 rounded-xl border border-[#ead5d2] bg-[#fffdfa] p-4 text-sm">
+                <p className="font-semibold">Your return request was rejected.</p>
+                {typeof supportEmail === "string" && supportEmail
+                  ? <a className="mt-2 inline-block font-semibold text-[#a15e61] underline" href={`mailto:${supportEmail}?${new URLSearchParams({ subject: `Return request for order ${order.order_number}`, body: `Hello, I have a question about the rejected return request for order ${order.order_number}.` }).toString()}`}>Email customer support</a>
+                  : <p className="mt-2 text-xs text-[#716763]">Customer support email is not configured yet. Please contact the store directly.</p>}
+              </div>}
+              {returnsEnabled === false && order.status === "delivered" && <p className="mt-4 text-xs text-[#716763]">Return requests are currently unavailable.</p>}
             </li>)}
           </ul>}
       </section>
