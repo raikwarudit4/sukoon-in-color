@@ -30,7 +30,7 @@ export default async function ReturnsSettingsPage() {
   return <main className="min-h-screen bg-[#fbf8f4] text-[#27221f]">
     <header className="border-b border-[#e8dfd7]"><div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
       <Link href="/" className="text-lg font-semibold tracking-[0.12em]">SUKOON <span className="text-[#b56e70]">IN COLOR</span></Link>
-      <nav className="flex gap-4 text-sm"><Link href="/admin/orders" className="text-[#716763] hover:text-[#a15e61]">Orders</Link><Link href="/admin/settings/shipping" className="text-[#716763] hover:text-[#a15e61]">Shipping</Link></nav>
+      <nav className="flex gap-4 text-sm"><Link href="/admin" className="text-[#716763] hover:text-[#a15e61]">Dashboard</Link><Link href="/admin/orders" className="text-[#716763] hover:text-[#a15e61]">Orders</Link><Link href="/admin/settings/shipping" className="text-[#716763] hover:text-[#a15e61]">Shipping</Link></nav>
     </div></header>
     <section className="mx-auto max-w-4xl px-6 py-10 sm:py-14">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a15e61]">Store management</p>

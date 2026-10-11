@@ -40,6 +40,28 @@ export function CartLineControls({ cartItemId, storeId, quantity }: CartLineCont
       return;
     }
 
+    window.dispatchEvent(new Event("cart-updated"));
+    router.refresh();
+  }
+
+  async function moveToWishlist() {
+    setErrorMessage("");
+    setIsSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("move_cart_item_to_wishlist", {
+      p_store_id: storeId,
+      p_cart_item_id: cartItemId,
+    });
+    setIsSaving(false);
+    if (error) {
+      console.error("Cart-to-wishlist failed:", error.code, error.message);
+      setErrorMessage(error.code === "PGRST202"
+        ? "The wishlist transfer migration is missing. Apply migration 064, then refresh."
+        : "Could not move this item to your wishlist. Please refresh and try again.");
+      return;
+    }
+    window.dispatchEvent(new Event("wishlist-updated"));
+    window.dispatchEvent(new Event("cart-updated"));
     router.refresh();
   }
 
@@ -74,6 +96,15 @@ export function CartLineControls({ cartItemId, storeId, quantity }: CartLineCont
           Remove
         </button>
       </div>
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={moveToWishlist}
+        title={`Move all ${quantity} ${quantity === 1 ? "unit" : "units"} to your wishlist`}
+        className="mt-2 text-xs font-semibold text-[#a15e61] underline underline-offset-4 disabled:opacity-50"
+      >
+        Move to wishlist
+      </button>
       {errorMessage && (
         <p role="alert" className="mt-2 text-xs text-[#7c4548]">
           {errorMessage}

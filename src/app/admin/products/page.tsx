@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CreateProductForm } from "./create-product-form";
 
 type Product = { id: string; name: string; slug: string; status: string; description: string | null };
-type Variant = { id: string; product_id: string; sku: string; title: string; price_minor: number; currency: string; is_active: boolean };
+type Variant = { id: string; product_id: string; sku: string; title: string; price_minor: number; currency: string; is_active: boolean; reorder_level: number };
 type StockLevel = { variant_id: string; location_id: string; on_hand: number; reserved: number };
 
 function formatPrice(amountMinor: number, currency: string) {
@@ -33,7 +33,7 @@ export default async function StoreProductsPage() {
 
   const [productResult, variantResult, levelResult] = await Promise.all([
     supabase.from("products").select("id, name, slug, status, description").eq("store_id", store.id).order("name"),
-    supabase.from("product_variants").select("id, product_id, sku, title, price_minor, currency, is_active").eq("store_id", store.id).order("sku"),
+    supabase.from("product_variants").select("id, product_id, sku, title, price_minor, currency, is_active, reorder_level").eq("store_id", store.id).order("sku"),
     supabase.from("inventory_levels").select("variant_id, location_id, on_hand, reserved").eq("store_id", store.id),
   ]);
   const loadError = productResult.error || variantResult.error || levelResult.error;
@@ -51,6 +51,7 @@ export default async function StoreProductsPage() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
           <Link href="/" className="text-lg font-semibold tracking-[0.12em]">SUKOON <span className="text-[#b56e70]">IN COLOR</span></Link>
           <nav className="flex flex-wrap items-center gap-4 text-sm">
+            <Link href="/admin" className="text-[#716763] hover:text-[#a15e61]">Dashboard</Link>
             <Link href="/admin/orders" className="text-[#716763] hover:text-[#a15e61]">Orders</Link>
             <Link href="/admin/reviews" className="text-[#716763] hover:text-[#a15e61]">Reviews</Link>
             <Link href="/admin/settings/shipping" className="text-[#716763] hover:text-[#a15e61]">Shipping</Link>
@@ -84,7 +85,11 @@ export default async function StoreProductsPage() {
                         <div>
                           <div className="flex flex-wrap items-center gap-3"><h3 className="text-lg font-medium">{product.name}</h3><span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${product.status === "active" ? "bg-[#e7f0e6] text-[#456247]" : "bg-[#f3ece7] text-[#716763]"}`}>{product.status}</span></div>
                           <p className="mt-1 text-sm text-[#716763]">/{product.slug} · {productVariants.length} {productVariants.length === 1 ? "variant" : "variants"} · {available} available</p>
-                          {productVariants.length > 0 && <ul className="mt-4 space-y-2 text-sm">{productVariants.map((variant) => <li key={variant.id} className="flex flex-wrap justify-between gap-2"><span>{variant.sku} · {variant.title}{!variant.is_active ? " · inactive" : ""}</span><span>{formatPrice(variant.price_minor, variant.currency)} · {stockByVariant.get(variant.id) ?? 0} available</span></li>)}</ul>}
+                          {productVariants.length > 0 && <ul className="mt-4 space-y-2 text-sm">{productVariants.map((variant) => {
+                            const availableStock = stockByVariant.get(variant.id) ?? 0;
+                            const needsReorder = variant.reorder_level > 0 && availableStock <= variant.reorder_level;
+                            return <li key={variant.id} className="flex flex-wrap justify-between gap-2"><span>{variant.sku} · {variant.title}{!variant.is_active ? " · inactive" : ""}{needsReorder && <span className="ml-2 rounded-full bg-[#fff0e7] px-2 py-0.5 text-xs font-semibold text-[#9a4c25]">Reorder needed</span>}</span><span>{formatPrice(variant.price_minor, variant.currency)} · {availableStock} available{variant.reorder_level > 0 ? ` · alert at ${variant.reorder_level}` : ""}</span></li>;
+                          })}</ul>}
                           {productVariants.length === 0 && <p className="mt-3 text-sm text-[#7c4548]">No variant yet.</p>}
                         </div>
                         <Link href={`/admin/products/${product.id}`} className="rounded-xl border border-[#d9c9bf] px-4 py-2.5 text-sm font-semibold text-[#a15e61] hover:bg-[#fbf8f4]">Manage</Link>

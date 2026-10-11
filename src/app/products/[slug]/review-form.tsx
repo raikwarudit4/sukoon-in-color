@@ -4,7 +4,7 @@ import { type FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function ReviewForm({ productId, storeId, userId }: { productId: string; storeId: string; userId: string }) {
+export function ReviewForm({ productId, storeId, userId, variantId }: { productId: string; storeId: string; userId: string; variantId: string }) {
   const router = useRouter();
   const [rating, setRating] = useState("5");
   const [title, setTitle] = useState("");
@@ -21,6 +21,7 @@ export function ReviewForm({ productId, storeId, userId }: { productId: string; 
       store_id: storeId,
       product_id: productId,
       user_id: userId,
+      reviewed_variant_id: variantId,
       rating: Number(rating),
       title: title.trim() || null,
       body: body.trim(),
@@ -53,7 +54,7 @@ export function ReviewForm({ productId, storeId, userId }: { productId: string; 
       <input id="review-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} className="mt-2 w-full rounded-xl border border-[#d9c9bf] px-4 py-3 text-sm outline-none focus:border-[#a15e61]" />
       <label htmlFor="review-body" className="mt-4 block text-sm font-medium">Your review</label>
       <textarea id="review-body" value={body} onChange={(event) => setBody(event.target.value)} required minLength={5} maxLength={2000} rows={4} className="mt-2 w-full resize-y rounded-xl border border-[#d9c9bf] px-4 py-3 text-sm outline-none focus:border-[#a15e61]" />
-      <p className="mt-2 text-xs text-[#716763]">Reviews are published after store approval.</p>
+      <p className="mt-2 text-xs text-[#716763]">Verified printable purchase. Reviews are published after store approval.</p>
       {error && <p role="alert" className="mt-3 text-sm text-[#7c4548]">{error}</p>}
       <button type="submit" disabled={saving} className="mt-4 rounded-xl bg-[#a15e61] px-5 py-3 text-sm font-semibold text-white hover:bg-[#884d50] disabled:opacity-60">{saving ? "Submitting…" : "Submit review"}</button>
     </form>

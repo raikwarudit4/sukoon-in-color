@@ -76,9 +76,9 @@ export default async function OrderReceiptPage({ params }: { params: Promise<{ i
         <Link href="/orders" className="text-sm font-semibold text-[#a15e61] underline underline-offset-4">Back to orders</Link>
         <PrintReceiptButton />
       </div>
-      <article className="rounded-2xl border border-[#eee5de] bg-white p-6 shadow-sm sm:p-10 print:rounded-none print:border-0 print:p-0 print:shadow-none">
+      <article className="font-serif rounded-2xl border border-[#eee5de] bg-white p-6 shadow-sm sm:p-10 print:rounded-none print:border-0 print:p-0 print:shadow-none">
         <header className="flex flex-wrap justify-between gap-5 border-b border-[#eee5de] pb-6">
-          <div><p className="text-lg font-semibold tracking-[0.12em]">SUKOON <span className="text-[#b56e70]">IN COLOR</span></p>
+          <div><p className="text-lg font-semibold tracking-[0.06em]">Sukoon <span className="text-[#b56e70]">in Color</span></p>
             <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-[#a15e61]">Order receipt</p>
             <h1 className="mt-1 text-3xl font-medium">{order.order_number}</h1>
           </div>

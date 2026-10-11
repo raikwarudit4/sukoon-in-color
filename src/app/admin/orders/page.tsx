@@ -91,6 +91,7 @@ export default async function StoreOrdersPage() {
     <header className="border-b border-[#e8dfd7]"><div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
       <Link href="/" className="text-lg font-semibold tracking-[0.12em]">SUKOON <span className="text-[#b56e70]">IN COLOR</span></Link>
       <nav className="flex items-center gap-4 text-sm">
+        <Link href="/admin" className="text-[#716763] hover:text-[#a15e61]">Dashboard</Link>
         <Link href="/admin/products" className="text-[#716763] hover:text-[#a15e61]">Products</Link>
         <Link href="/admin/reviews" className="text-[#716763] hover:text-[#a15e61]">Reviews</Link>
         <Link href="/admin/settings/shipping" className="text-[#716763] hover:text-[#a15e61]">Shipping fee</Link>

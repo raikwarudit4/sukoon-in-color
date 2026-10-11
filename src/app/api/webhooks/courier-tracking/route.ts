@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   let admin;
   try { admin = createAdminClient(); } catch { return Response.json({ error: "Webhook storage is not configured." }, { status: 503 }); }
   const { data: shipment, error: lookupError } = await admin.from("shipments")
-    .select("id, store_id, order_id, status, tracking_number")
+    .select("id, store_id, order_id, status, tracking_number, shipped_at, delivered_at")
     .eq("provider", "shiprocket").eq("tracking_number", payload.awb).maybeSingle();
   if (lookupError) return Response.json({ error: "Could not process tracking event." }, { status: 500 });
   if (!shipment) return Response.json({ received: true });
@@ -66,6 +66,8 @@ export async function POST(request: Request) {
   const nextStatus = mapStatus(providerStatus);
   const { error: updateError } = await admin.from("shipments").update({
     ...(nextStatus ? { status: nextStatus } : {}),
+    ...(nextStatus === "shipped" && !shipment.shipped_at ? { shipped_at: eventTime } : {}),
+    ...(nextStatus === "delivered" && !shipment.delivered_at ? { delivered_at: eventTime } : {}),
     provider_status: providerStatus,
     ...(typeof payload.courier_name === "string" ? { carrier: payload.courier_name.slice(0, 120) } : {}),
     tracking_url: `https://shiprocket.co/tracking/${encodeURIComponent(payload.awb)}`,

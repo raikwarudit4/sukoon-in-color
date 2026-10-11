@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AccountNav } from "@/components/account-nav";
+import { FavoriteButton } from "@/components/favorite-button";
 import { createClient } from "@/lib/supabase/server";
 import { CatalogFilters } from "@/components/catalog-filters";
 
@@ -80,6 +81,15 @@ export default async function Home({
   if (sort === "price-desc") products.sort((a, b) => (b.product_variants?.[0]?.price_minor ?? 0) - (a.product_variants?.[0]?.price_minor ?? 0));
   if (sort === "name") products.sort((a, b) => a.name.localeCompare(b.name));
 
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle()
+    : { data: null };
+  const { data: savedItems } = profile && store
+    ? await supabase.from("wishlist_items").select("product_id").eq("store_id", store.id).eq("user_id", profile.id)
+    : { data: [] };
+  const savedProductIds = new Set((savedItems ?? []).map((item) => item.product_id));
+
   return (
     <main className="min-h-screen bg-[#fbf8f4] text-[#27221f]">
       <header className="border-b border-[#e8dfd7] bg-[#fbf8f4]">
@@ -144,39 +154,50 @@ export default async function Home({
               )[0];
 
               return (
-                <Link
+                <article
                   key={product.id}
-                  href={`/products/${product.slug}`}
                   className="flex min-h-60 flex-col rounded-2xl border border-[#eee5de] bg-white p-6 shadow-[0_6px_24px_rgba(72,47,37,0.04)]"
                 >
-                  {image ? (
-                    <div className="relative mb-6 aspect-[4/3] overflow-hidden rounded-xl bg-[#f4e9e5]">
-                      <Image
-                        src={image.url}
-                        alt={image.alt_text || product.name}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-                        unoptimized
-                        className="object-cover"
-                      />
+                  <Link href={`/products/${product.slug}`} className="flex flex-1 flex-col">
+                    {image ? (
+                      <div className="relative mb-6 aspect-[4/3] overflow-hidden rounded-xl bg-[#f4e9e5]">
+                        <Image
+                          src={image.url}
+                          alt={image.alt_text || product.name}
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="mb-6 flex h-24 items-center justify-center rounded-xl bg-[#f4e9e5] text-3xl text-[#a15e61]">
+                        ✿
+                      </div>
+                    )}
+                    <h3 className="text-lg font-medium">{product.name}</h3>
+                    {product.description && (
+                      <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#716763]">
+                        {product.description}
+                      </p>
+                    )}
+                    <div className="mt-auto pt-5 text-sm font-semibold">
+                      {variant
+                        ? formatPrice(variant.price_minor, variant.currency)
+                        : "Price coming soon"}
                     </div>
-                  ) : (
-                    <div className="mb-6 flex h-24 items-center justify-center rounded-xl bg-[#f4e9e5] text-3xl text-[#a15e61]">
-                      ✿
-                    </div>
-                  )}
-                  <h3 className="text-lg font-medium">{product.name}</h3>
-                  {product.description && (
-                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#716763]">
-                      {product.description}
-                    </p>
-                  )}
-                  <div className="mt-auto pt-5 text-sm font-semibold">
-                    {variant
-                      ? formatPrice(variant.price_minor, variant.currency)
-                      : "Price coming soon"}
-                  </div>
-                </Link>
+                  </Link>
+                  {store && <div className="mt-4">
+                    <FavoriteButton
+                      storeId={store.id}
+                      productId={product.id}
+                      userId={profile?.id ?? null}
+                      initiallySaved={savedProductIds.has(product.id)}
+                      returnPath={`/products/${product.slug}`}
+                      compact
+                    />
+                  </div>}
+                </article>
               );
             })}
           </div>

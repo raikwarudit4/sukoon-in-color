@@ -25,8 +25,8 @@ export default async function EditStoreProductPage({ params }: { params: Promise
   );
 
   const [productResult, variantResult, locationResult, levelResult, imageResult] = await Promise.all([
-    supabase.from("products").select("id, store_id, name, slug, description, status").eq("id", id).eq("store_id", store.id).maybeSingle(),
-    supabase.from("product_variants").select("id, product_id, store_id, sku, title, price_minor, currency, is_active").eq("store_id", store.id).eq("product_id", id).order("sku"),
+    supabase.from("products").select("id, store_id, name, slug, description, status, metadata").eq("id", id).eq("store_id", store.id).maybeSingle(),
+    supabase.from("product_variants").select("id, product_id, store_id, sku, title, option_values, price_minor, compare_at_price_minor, currency, is_active, reorder_level").eq("store_id", store.id).eq("product_id", id).order("sku"),
     supabase.from("inventory_locations").select("id, name, is_active").eq("store_id", store.id).eq("is_active", true).order("name"),
     supabase.from("inventory_levels").select("location_id, variant_id, on_hand, reserved").eq("store_id", store.id),
     supabase.from("product_media").select("id, url, alt_text, sort_order").eq("store_id", store.id).eq("product_id", id).order("sort_order"),
@@ -41,7 +41,7 @@ export default async function EditStoreProductPage({ params }: { params: Promise
       <header className="border-b border-[#e8dfd7]">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
           <Link href="/" className="text-lg font-semibold tracking-[0.12em]">SUKOON <span className="text-[#b56e70]">IN COLOR</span></Link>
-          <Link href="/admin/products" className="text-sm text-[#716763] hover:text-[#a15e61]">Back to products</Link>
+          <nav className="flex items-center gap-4 text-sm"><Link href="/admin" className="text-[#716763] hover:text-[#a15e61]">Dashboard</Link><Link href="/admin/products" className="text-[#716763] hover:text-[#a15e61]">Back to products</Link></nav>
         </div>
       </header>
       <section className="mx-auto max-w-5xl px-6 py-10 sm:py-14">

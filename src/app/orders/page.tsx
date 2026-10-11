@@ -14,6 +14,7 @@ type Order = {
   tax_minor: number;
   total_minor: number;
   created_at: string;
+  delivered_at: string | null;
   shipments: {
     provider: string | null;
     carrier: string | null;
@@ -31,6 +32,7 @@ type Order = {
     sku_snapshot: string;
     quantity: number;
     line_total_minor: number;
+    sale_type_snapshot: "original" | "print";
   }[];
   returns: {
     id: string;
@@ -76,7 +78,7 @@ export default async function OrdersPage() {
 
   const { data, error } = await supabase
     .from("orders")
-    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor), returns(id, status, reason, created_at, evidence, return_items(order_item_id, quantity)), shipments(provider, carrier, tracking_number, status, provider_status, tracking_url, tracking_updated_at, shipment_events(status, detail, occurred_at))")
+    .select("id, order_number, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, created_at, delivered_at, order_items(id, product_name_snapshot, variant_name_snapshot, sku_snapshot, quantity, line_total_minor, sale_type_snapshot), returns(id, status, reason, created_at, evidence, return_items(order_item_id, quantity)), shipments(provider, carrier, tracking_number, status, provider_status, tracking_url, tracking_updated_at, shipment_events(status, detail, occurred_at))")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: false });
 
@@ -131,15 +133,27 @@ export default async function OrdersPage() {
                   return <li key={line.order_item_id}>{item?.product_name_snapshot ?? "Order item"} × {line.quantity}</li>;
                 })}</ul>
               </div>)}
-              {returnsEnabled === true && !returnsSettingError && order.status === "delivered" && !order.returns.some((entry) => ["requested", "approved", "received", "rejected"].includes(entry.status)) && <ReturnRequestForm
+              {(() => {
+                const printableItems = order.order_items.filter((item) => item.sale_type_snapshot === "print");
+                const deadline = order.delivered_at ? new Date(new Date(order.delivered_at).getTime() + 7 * 24 * 60 * 60 * 1000) : null;
+                const inWindow = Boolean(deadline && Date.now() <= deadline.getTime());
+                const hasReturn = order.returns.some((entry) => ["requested", "approved", "received", "rejected"].includes(entry.status));
+                return returnsEnabled === true && !returnsSettingError && order.status === "delivered" && printableItems.length > 0 && deadline && !hasReturn && inWindow
+                  ? <div className="mt-4"><p className="mb-2 text-xs text-[#716763]">Printable items can be returned by {new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(deadline)} IST (within 7 days of delivery).</p><ReturnRequestForm
                 orderId={order.id}
                 userId={profile.id}
-                items={order.order_items.map((item) => ({
+                items={printableItems.map((item) => ({
                   id: item.id,
                   name: item.product_name_snapshot + (item.variant_name_snapshot ? ` · ${item.variant_name_snapshot}` : ""),
                   quantity: item.quantity,
                 }))}
-              />}
+              /></div>
+                  : order.status === "delivered" && printableItems.length > 0 && deadline && !inWindow && !hasReturn
+                    ? <p className="mt-4 text-xs text-[#716763]">The 7-day return period ended on {new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(deadline)} IST.</p>
+                    : order.status === "delivered" && printableItems.length === 0
+                      ? <p className="mt-4 text-xs text-[#716763]">Returns are available only for delivered printable items, within 7 days of delivery. Original paintings are not returnable.</p>
+                      : null;
+              })()}
               {order.returns.some((entry) => entry.status === "rejected") && <div className="mt-4 rounded-xl border border-[#ead5d2] bg-[#fffdfa] p-4 text-sm">
                 <p className="font-semibold">Your return request was rejected.</p>
                 {typeof supportEmail === "string" && supportEmail
