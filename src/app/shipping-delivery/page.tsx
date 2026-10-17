@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storeContact } from "@/lib/store-contact";
 
 export const metadata = {
   title: "Shipping & Delivery | Sukoon in Color",
@@ -39,9 +40,9 @@ export default function ShippingDeliveryPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-[#27221f]">Contact</h2>
-            <p className="mt-2">Sukoon in Color · Pune, Maharashtra</p>
-            <p>Phone: <a className="text-[#8f5558] underline" href="tel:+917000887490">7000887490</a></p>
-            <p>Email: <a className="text-[#8f5558] underline" href="mailto:support@sukoonincolor.com">support@sukoonincolor.com</a></p>
+            <p className="mt-2">{storeContact.name} · {storeContact.location}</p>
+            <p>Phone: <a className="text-[#8f5558] underline" href={`tel:${storeContact.phoneHref}`}>{storeContact.phone}</a></p>
+            <p>Email: <a className="text-[#8f5558] underline" href={`mailto:${storeContact.email}`}>{storeContact.email}</a></p>
           </section>
         </div>
       </article>

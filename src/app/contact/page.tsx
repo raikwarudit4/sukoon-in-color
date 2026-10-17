@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storeContact } from "@/lib/store-contact";
 
 export const metadata = {
   title: "Contact | Sukoon in Color",
@@ -14,9 +15,9 @@ export default function ContactPage() {
         <h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">Contact Sukoon in Color</h1>
         <p className="mt-4 text-sm leading-6 text-[#716763]">For help with an order, delivery, return request, or a product, contact us using the details below. Including your order number helps us assist you.</p>
         <address className="mt-8 space-y-4 not-italic text-sm leading-6 text-[#514944]">
-          <p><span className="block font-semibold text-[#27221f]">Email</span><a className="text-[#8f5558] underline" href="mailto:support@sukoonincolor.com">support@sukoonincolor.com</a></p>
-          <p><span className="block font-semibold text-[#27221f]">Phone</span><a className="text-[#8f5558] underline" href="tel:+917000887490">7000887490</a></p>
-          <p><span className="block font-semibold text-[#27221f]">Location</span>Pune, Maharashtra, India</p>
+          <p><span className="block font-semibold text-[#27221f]">Email</span><a className="text-[#8f5558] underline" href={`mailto:${storeContact.email}`}>{storeContact.email}</a></p>
+          <p><span className="block font-semibold text-[#27221f]">Phone</span><a className="text-[#8f5558] underline" href={`tel:${storeContact.phoneHref}`}>{storeContact.phone}</a></p>
+          <p><span className="block font-semibold text-[#27221f]">Location</span>{storeContact.location}</p>
         </address>
         <p className="mt-8 border-t border-[#eee5de] pt-5 text-sm leading-6 text-[#716763]">You can also review our <Link href="/shipping-delivery" className="text-[#8f5558] underline">Shipping &amp; Delivery</Link> and <Link href="/cancellation-refunds" className="text-[#8f5558] underline">Cancellation &amp; Refund</Link> information.</p>
       </article>

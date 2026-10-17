@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storeContact } from "@/lib/store-contact";
 
 export const metadata = {
   title: "Privacy Policy | Sukoon in Color",
@@ -49,7 +50,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-[#27221f]">Contact</h2>
-            <p className="mt-2">For privacy questions or requests, contact Sukoon in Color at <a className="text-[#8f5558] underline" href="mailto:support@sukoonincolor.com">support@sukoonincolor.com</a> or <a className="text-[#8f5558] underline" href="tel:+917000887490">7000887490</a>. We are based in Pune, Maharashtra, India.</p>
+            <p className="mt-2">For privacy questions or requests, contact {storeContact.name} at <a className="text-[#8f5558] underline" href={`mailto:${storeContact.email}`}>{storeContact.email}</a> or <a className="text-[#8f5558] underline" href={`tel:${storeContact.phoneHref}`}>{storeContact.phone}</a>. We are based in {storeContact.location}.</p>
             <p className="mt-2">See also our <Link href="/terms" className="text-[#8f5558] underline">Terms of Service</Link> and <Link href="/cancellation-refunds" className="text-[#8f5558] underline">Cancellation &amp; Refund Policy</Link>.</p>
           </section>
         </div>

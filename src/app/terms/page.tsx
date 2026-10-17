@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storeContact } from "@/lib/store-contact";
 
 export const metadata = {
   title: "Terms of Service | Sukoon in Color",
@@ -43,7 +44,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-[#27221f]">6. Contact</h2>
-            <p className="mt-2">For questions about these terms or an order, contact Sukoon in Color, Pune, Maharashtra, India, at <a className="text-[#8f5558] underline" href="mailto:support@sukoonincolor.com">support@sukoonincolor.com</a> or <a className="text-[#8f5558] underline" href="tel:+917000887490">7000887490</a>.</p>
+            <p className="mt-2">For questions about these terms or an order, contact {storeContact.name}, {storeContact.location}, at <a className="text-[#8f5558] underline" href={`mailto:${storeContact.email}`}>{storeContact.email}</a> or <a className="text-[#8f5558] underline" href={`tel:${storeContact.phoneHref}`}>{storeContact.phone}</a>.</p>
           </section>
         </div>
         <p className="mt-10 border-t border-[#eee5de] pt-5 text-xs leading-5 text-[#716763]">We may update these terms when the website or its services change. The latest version will be posted on this page.</p>

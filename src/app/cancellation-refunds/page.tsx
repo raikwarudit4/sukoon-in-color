@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storeContact } from "@/lib/store-contact";
 
 export const metadata = {
   title: "Cancellation & Refund Policy | Sukoon in Color",
@@ -42,10 +43,10 @@ export default function CancellationRefundsPage() {
             <h2 className="text-lg font-semibold text-[#27221f]">4. Contact us</h2>
             <p className="mt-2">For cancellation, return, or refund questions, contact Sukoon in Color:</p>
             <address className="mt-2 not-italic">
-              Sukoon in Color<br />
-              Pune, Maharashtra<br />
-              Phone: <a className="text-[#8f5558] underline" href="tel:+917000887490">7000887490</a><br />
-              Email: <a className="text-[#8f5558] underline" href="mailto:support@sukoonincolor.com">support@sukoonincolor.com</a>
+              {storeContact.name}<br />
+              {storeContact.location}<br />
+              Phone: <a className="text-[#8f5558] underline" href={`tel:${storeContact.phoneHref}`}>{storeContact.phone}</a><br />
+              Email: <a className="text-[#8f5558] underline" href={`mailto:${storeContact.email}`}>{storeContact.email}</a>
             </address>
           </section>
         </div>

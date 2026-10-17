@@ -4,6 +4,7 @@ import { AccountNav } from "@/components/account-nav";
 import { FavoriteButton } from "@/components/favorite-button";
 import { createClient } from "@/lib/supabase/server";
 import { CatalogFilters } from "@/components/catalog-filters";
+import { storeContact } from "@/lib/store-contact";
 
 type CatalogProduct = {
   id: string;
@@ -213,8 +214,8 @@ export default async function Home({
             <Link href="/privacy" className="hover:text-[#a15e61]">Privacy</Link>
             <Link href="/terms" className="hover:text-[#a15e61]">Terms</Link>
             <Link href="/contact" className="hover:text-[#a15e61]">Contact</Link>
-            <a href="mailto:support@sukoonincolor.com" className="hover:text-[#a15e61]">support@sukoonincolor.com</a>
-            <a href="tel:+917000887490" className="hover:text-[#a15e61]">7000887490</a>
+            <a href={`mailto:${storeContact.email}`} className="hover:text-[#a15e61]">{storeContact.email}</a>
+            {/* <a href={`tel:${storeContact.phoneHref}`} className="hover:text-[#a15e61]">{storeContact.phone}</a> */}
           </nav>
         </div>
       </footer>
