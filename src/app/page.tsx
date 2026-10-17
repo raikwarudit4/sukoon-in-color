@@ -204,8 +204,17 @@ export default async function Home({
         )}
       </section>
 
-      <footer className="border-t border-[#e8dfd7] px-6 py-7 text-center text-sm text-[#716763]">
-        Sukoon in Color
+      <footer className="border-t border-[#e8dfd7] px-6 py-7 text-sm text-[#716763]">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 sm:flex-row">
+          <p>© {new Date().getFullYear()} Sukoon in Color · Pune</p>
+          <nav aria-label="Store policies" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            <Link href="/cancellation-refunds" className="hover:text-[#a15e61]">Cancellation &amp; refunds</Link>
+            <Link href="/shipping-delivery" className="hover:text-[#a15e61]">Shipping &amp; delivery</Link>
+            <Link href="/contact" className="hover:text-[#a15e61]">Contact</Link>
+            <a href="mailto:support@sukoonincolor.com" className="hover:text-[#a15e61]">support@sukoonincolor.com</a>
+            <a href="tel:+917000887490" className="hover:text-[#a15e61]">7000887490</a>
+          </nav>
+        </div>
       </footer>
     </main>
   );
