@@ -20,7 +20,7 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-semibold text-[#27221f]">Information we handle</h2>
             <ul className="mt-2 list-disc space-y-2 pl-5">
               <li><strong>Account details:</strong> email address and the account information you provide, such as your name or phone number.</li>
-              <li><strong>Orders and delivery:</strong> recipient name, phone number, delivery address, items purchased, order totals, payment status, and order history.</li>
+              <li><strong>Orders and delivery:</strong> recipient name, phone number, delivery address (including any address you choose to save to your account), items purchased, order totals, payment status, and order history.</li>
               <li><strong>Shopping activity:</strong> cart and wishlist contents and basic product-view counts. Product-view counting uses a browser session identifier stored in session storage.</li>
               <li><strong>Customer submissions:</strong> review text and ratings, return reasons, and optional photos submitted with a return request.</li>
               <li><strong>Technical and session information:</strong> authentication/session cookies and information needed to keep the site and account working securely.</li>

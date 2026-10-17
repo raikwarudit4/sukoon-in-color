@@ -13,6 +13,19 @@ type CartForCheckout = {
   }[];
 };
 
+type SavedAddress = {
+  id: string;
+  recipient_name: string;
+  phone: string | null;
+  address_line1: string;
+  address_line2: string | null;
+  locality: string;
+  city: string;
+  region: string;
+  postal_code: string;
+  is_default: boolean;
+};
+
 function price(value: number, currency: string) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: currency.trim() || "INR" }).format(value / 100);
 }
@@ -27,6 +40,14 @@ export default async function CheckoutPage() {
   if (!profile || !store) {
     return <main className="grid min-h-screen place-items-center bg-[#fbf8f4] p-6"><p>Checkout is unavailable. Please return to the collection.</p></main>;
   }
+
+  const { data: addressData } = await supabase
+    .from("customer_addresses")
+    .select("id, recipient_name, phone, address_line1, address_line2, locality, city, region, postal_code, is_default")
+    .eq("user_id", profile.id)
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: false });
+  const savedAddresses = (addressData ?? []) as SavedAddress[];
 
   const { data: shippingFeeData, error: shippingFeeError } = await supabase.rpc("get_public_shipping_fee", { p_store_id: store.id });
   const shippingMinor = Number(shippingFeeData);
@@ -52,7 +73,7 @@ export default async function CheckoutPage() {
         {items.length === 0 ? <div className="mt-8 rounded-2xl border border-dashed border-[#d9c9bf] bg-white p-10 text-center">
           <p>Your cart is empty.</p><Link href="/" className="mt-4 inline-block font-semibold text-[#a15e61]">Browse the collection</Link>
         </div> : <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px]">
-          <CheckoutForm storeId={store.id} />
+          <CheckoutForm storeId={store.id} userId={profile.id} savedAddresses={savedAddresses} />
           <aside className="h-fit rounded-2xl border border-[#eee5de] bg-white p-6">
             <h2 className="text-lg font-medium">Order summary</h2>
             <ul className="mt-4 divide-y divide-[#eee5de]">

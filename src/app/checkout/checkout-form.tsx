@@ -5,6 +5,23 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type PaymentChoice = "cod" | "razorpay";
+type SavedAddress = {
+  id: string;
+  recipient_name: string;
+  phone: string | null;
+  address_line1: string;
+  address_line2: string | null;
+  locality: string;
+  city: string;
+  region: string;
+  postal_code: string;
+  is_default: boolean;
+};
+type AddressFields = Omit<SavedAddress, "id" | "is_default">;
+const emptyAddress: AddressFields = {
+  recipient_name: "", phone: "", address_line1: "", address_line2: "",
+  locality: "", city: "", region: "", postal_code: "",
+};
 type RazorpayCheckoutOptions = {
   key: string;
   amount: number;
@@ -40,9 +57,21 @@ function loadRazorpayCheckout() {
   return checkoutScript;
 }
 
-export function CheckoutForm({ storeId }: { storeId: string }) {
+export function CheckoutForm({ storeId, userId, savedAddresses: initialSavedAddresses }: {
+  storeId: string;
+  userId: string;
+  savedAddresses: SavedAddress[];
+}) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const requestKeys = useRef<{ cod?: string; razorpay?: string }>({});
+  const [savedAddresses, setSavedAddresses] = useState(initialSavedAddresses);
+  const [selectedAddressId, setSelectedAddressId] = useState(initialSavedAddresses[0]?.id ?? "");
+  const [address, setAddress] = useState<AddressFields>(initialSavedAddresses[0]
+    ? { ...initialSavedAddresses[0], phone: initialSavedAddresses[0].phone ?? "", address_line2: initialSavedAddresses[0].address_line2 ?? "" }
+    : emptyAddress);
+  const [addressMessage, setAddressMessage] = useState("");
+  const [savingAddress, setSavingAddress] = useState(false);
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("cod");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -165,18 +194,94 @@ export function CheckoutForm({ storeId }: { storeId: string }) {
     else await submitCod(form);
   }
 
+  async function saveCurrentAddress() {
+    setAddressMessage("");
+    if (!formRef.current?.reportValidity()) return;
+    const normalized: AddressFields = {
+      recipient_name: address.recipient_name.trim(),
+      phone: address.phone?.trim() ?? "",
+      address_line1: address.address_line1.trim(),
+      address_line2: address.address_line2?.trim() ?? "",
+      locality: address.locality.trim(),
+      city: address.city.trim(),
+      region: address.region.trim(),
+      postal_code: address.postal_code.trim(),
+    };
+    const existing = savedAddresses.find((item) =>
+      item.recipient_name === normalized.recipient_name
+      && (item.phone ?? "") === normalized.phone
+      && item.address_line1 === normalized.address_line1
+      && (item.address_line2 ?? "") === normalized.address_line2
+      && item.locality === normalized.locality
+      && item.city === normalized.city
+      && item.region === normalized.region
+      && item.postal_code === normalized.postal_code,
+    );
+    if (existing) {
+      setSelectedAddressId(existing.id);
+      setAddressMessage("This address is already saved to your account.");
+      return;
+    }
+
+    setSavingAddress(true);
+    const supabase = createClient();
+    const { data, error: saveError } = await supabase
+      .from("customer_addresses")
+      .insert({ user_id: userId, ...normalized, country_code: "IN", is_default: savedAddresses.length === 0 })
+      .select("id, recipient_name, phone, address_line1, address_line2, locality, city, region, postal_code, is_default")
+      .single();
+    setSavingAddress(false);
+    if (saveError || !data) {
+      setAddressMessage("Could not save this address. Refresh and try again.");
+      return;
+    }
+    setSavedAddresses((current) => [data as SavedAddress, ...current]);
+    setSelectedAddressId(data.id);
+    setAddressMessage("Address saved to your account.");
+  }
+
+  function chooseAddress(id: string) {
+    setSelectedAddressId(id);
+    setAddressMessage("");
+    const selected = savedAddresses.find((item) => item.id === id);
+    setAddress(selected ? {
+      recipient_name: selected.recipient_name,
+      phone: selected.phone ?? "",
+      address_line1: selected.address_line1,
+      address_line2: selected.address_line2 ?? "",
+      locality: selected.locality,
+      city: selected.city,
+      region: selected.region,
+      postal_code: selected.postal_code,
+    } : emptyAddress);
+  }
+
   const inputClass = "mt-1 w-full rounded-xl border border-[#d9c9bf] bg-white px-4 py-3 text-sm outline-none focus:border-[#a15e61]";
-  return <form onSubmit={submit} className="rounded-2xl border border-[#eee5de] bg-white p-5 sm:p-7">
+  return <form ref={formRef} onSubmit={submit} className="rounded-2xl border border-[#eee5de] bg-white p-5 sm:p-7">
     <h2 className="text-lg font-medium">Delivery address</h2>
+    {savedAddresses.length > 0 && <div className="mt-4">
+      <label htmlFor="saved-address" className="block text-sm font-medium">Use a saved address</label>
+      <select id="saved-address" value={selectedAddressId} onChange={(event) => chooseAddress(event.target.value)} className={inputClass}>
+        <option value="">Enter a different address</option>
+        {savedAddresses.map((item) => <option key={item.id} value={item.id}>{item.recipient_name} · {item.city} · {item.postal_code}{item.is_default ? " · Default" : ""}</option>)}
+      </select>
+    </div>}
     <div className="mt-5 grid gap-4 sm:grid-cols-2">
-      <label className="text-sm sm:col-span-2">Full name<input className={inputClass} name="recipient_name" autoComplete="name" required maxLength={160} /></label>
-      <label className="text-sm">Phone<input className={inputClass} name="phone" type="tel" autoComplete="tel" required maxLength={32} /></label>
-      <label className="text-sm">Postal code<input className={inputClass} name="postal_code" autoComplete="postal-code" required maxLength={20} /></label>
-      <label className="text-sm sm:col-span-2">Address<input className={inputClass} name="address_line1" autoComplete="address-line1" required maxLength={240} /></label>
-      <label className="text-sm sm:col-span-2">Apartment, suite, etc. (optional)<input className={inputClass} name="address_line2" autoComplete="address-line2" maxLength={240} /></label>
-      <label className="text-sm">Area / locality<input className={inputClass} name="locality" autoComplete="address-level3" required maxLength={120} /></label>
-      <label className="text-sm">City<input className={inputClass} name="city" autoComplete="address-level2" required maxLength={120} /></label>
-      <label className="text-sm sm:col-span-2">State / region<input className={inputClass} name="region" autoComplete="address-level1" required maxLength={120} /></label>
+      <label className="text-sm sm:col-span-2">Full name<input className={inputClass} name="recipient_name" autoComplete="name" required maxLength={160} value={address.recipient_name} onChange={(event) => setAddress({ ...address, recipient_name: event.target.value })} /></label>
+      <label className="text-sm">Phone<input className={inputClass} name="phone" type="tel" autoComplete="tel" required maxLength={32} value={address.phone ?? ""} onChange={(event) => setAddress({ ...address, phone: event.target.value })} /></label>
+      <label className="text-sm">Postal code<input className={inputClass} name="postal_code" autoComplete="postal-code" required maxLength={20} value={address.postal_code} onChange={(event) => setAddress({ ...address, postal_code: event.target.value })} /></label>
+      <label className="text-sm sm:col-span-2">Address<input className={inputClass} name="address_line1" autoComplete="address-line1" required maxLength={240} value={address.address_line1} onChange={(event) => setAddress({ ...address, address_line1: event.target.value })} /></label>
+      <label className="text-sm sm:col-span-2">Apartment, suite, etc. (optional)<input className={inputClass} name="address_line2" autoComplete="address-line2" maxLength={240} value={address.address_line2 ?? ""} onChange={(event) => setAddress({ ...address, address_line2: event.target.value })} /></label>
+      <label className="text-sm">Area / locality<input className={inputClass} name="locality" autoComplete="address-level3" required maxLength={120} value={address.locality} onChange={(event) => setAddress({ ...address, locality: event.target.value })} /></label>
+      <label className="text-sm">City<input className={inputClass} name="city" autoComplete="address-level2" required maxLength={120} value={address.city} onChange={(event) => setAddress({ ...address, city: event.target.value })} /></label>
+      <label className="text-sm sm:col-span-2">State / region<input className={inputClass} name="region" autoComplete="address-level1" required maxLength={120} value={address.region} onChange={(event) => setAddress({ ...address, region: event.target.value })} /></label>
+    </div>
+    <div className="mt-4">
+      <button type="button" onClick={saveCurrentAddress} disabled={savingAddress} className="rounded-lg border border-[#d9c9bf] px-3 py-2 text-xs font-semibold text-[#884d50] disabled:opacity-60">
+        {savingAddress ? "Saving address…" : "Save address to my account"}
+      </button>
+      {addressMessage && <p role="status" className="mt-2 text-xs text-[#716763]">{addressMessage}</p>}
+      <p className="mt-1 text-xs text-[#716763]">Saved addresses are private to your account and can be selected at future checkouts.</p>
     </div>
     <fieldset className="mt-6">
       <legend className="text-sm font-medium">Payment method</legend>
