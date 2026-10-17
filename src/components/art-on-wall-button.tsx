@@ -48,7 +48,6 @@ export function ArtOnWallButton({ imageUrl, productName, originalDimensions, pur
             <img src={imageUrl} alt={productName} className="h-full w-full object-fill shadow-md" />
             {heightCm && <span className="absolute -right-7 top-0 h-full border-l border-[#27221f] after:absolute after:-left-1 after:top-0 after:h-px after:w-2 after:bg-[#27221f] before:absolute before:-left-1 before:bottom-0 before:h-px before:w-2 before:bg-[#27221f]" />}
           </div>
-          {heightCm && <div className="absolute left-[32%] top-[39%] -translate-y-1/2 -translate-x-[calc(50%+0.8rem)] rounded bg-white/90 px-1.5 py-1 text-[10px] font-medium text-[#27221f] sm:text-xs">{heightCm.toFixed(1)} cm / {(heightCm / 2.54).toFixed(1)} in</div>}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm text-[#716763]">
           <span>{productName} · {purchaseType === "original" ? "Original painting" : printSize || "Print"}</span>
