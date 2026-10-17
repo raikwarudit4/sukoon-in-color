@@ -41,6 +41,16 @@ type ProductDetail = {
   }[];
 };
 
+function formatArtworkSize(value: string) {
+  if (/\bcm\b/i.test(value)) return value;
+  const inches = value.match(/(\d+(?:\.\d+)?)\s*(?:inches|inch|in|")?\s*[x×]\s*(\d+(?:\.\d+)?)\s*(?:inches|inch|in|")/i);
+  if (!inches) return value;
+
+  const widthCm = (Number(inches[1]) * 2.54).toFixed(1);
+  const heightCm = (Number(inches[2]) * 2.54).toFixed(1);
+  return `${value} (${widthCm} × ${heightCm} cm)`;
+}
+
 export default async function ProductPage({
   params,
 }: {
@@ -223,7 +233,7 @@ export default async function ProductPage({
           <h2 id="specifications-heading" className="text-2xl font-medium">Specifications</h2>
           <dl className="mt-5 grid gap-x-12 gap-y-4 sm:grid-cols-2 lg:max-w-4xl">
             {specificationRows.map(([label, value]) => <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-4 border-b border-[#eee5de] pb-3 text-sm">
-              <dt className="text-[#716763]">{label}</dt><dd className="font-medium text-[#27221f]">{value}</dd>
+              <dt className="text-[#716763]">{label}</dt><dd className="font-medium text-[#27221f]">{label === "Size" ? formatArtworkSize(value) : value}</dd>
             </div>)}
           </dl>
         </div>
