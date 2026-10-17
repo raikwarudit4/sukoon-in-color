@@ -115,6 +115,28 @@ function ProductDetailsForm({ storeId, product, images }: { storeId: string; pro
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function deleteDraftProduct() {
+    if (product.status !== "draft" || status !== "draft") return;
+    const confirmed = window.confirm(`Permanently delete the draft product “${product.name}”? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setError("");
+    setMessage("");
+    setDeleting(true);
+    const supabase = createClient();
+    const { error: deleteError } = await supabase.rpc("delete_draft_product", { p_product_id: product.id });
+    setDeleting(false);
+    if (deleteError) {
+      setError(deleteError.message.includes("order or inventory history")
+        ? "This draft has order or inventory history and cannot be deleted. You can archive it instead."
+        : "Could not delete this draft product. Refresh and try again.");
+      return;
+    }
+    router.replace("/admin/products");
+    router.refresh();
+  }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -240,7 +262,10 @@ function ProductDetailsForm({ storeId, product, images }: { storeId: string; pro
       <label className="block text-sm font-medium sm:col-span-2">Print materials<input value={saleOptions.print_materials.join(", ")} onChange={(event) => setSaleOptions({ ...saleOptions, print_materials: event.target.value.split(",") })} placeholder="Paper, Canvas" disabled={!saleOptions.printable_enabled} className="mt-2 w-full rounded-xl border border-[#d9c9bf] px-4 py-3 font-normal disabled:bg-[#f4f0ed]" /><span className="mt-1 block text-xs font-normal text-[#716763]">Comma-separated, for example Paper, Canvas.</span></label>
       {error && <p role="alert" className="text-sm text-[#7c4548] sm:col-span-2">{error}</p>}
       {message && <p role="status" className="text-sm text-[#456247] sm:col-span-2">{message}</p>}
-      <div className="sm:col-span-2"><button type="submit" disabled={saving} className="rounded-xl bg-[#a15e61] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{saving ? "Saving…" : "Save product"}</button></div>
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+        <button type="submit" disabled={saving || deleting} className="rounded-xl bg-[#a15e61] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{saving ? "Saving…" : "Save product"}</button>
+        {product.status === "draft" && status === "draft" && <button type="button" onClick={deleteDraftProduct} disabled={saving || deleting} className="rounded-xl border border-[#b56e70] px-5 py-3 text-sm font-semibold text-[#8f3f42] hover:bg-[#fff3f1] disabled:opacity-60">{deleting ? "Deleting…" : "Delete draft"}</button>}
+      </div>
     </form>
   );
 }
