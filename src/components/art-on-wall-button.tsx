@@ -9,6 +9,7 @@ type Props = {
   imageUrl: string;
   productName: string;
   originalDimensions?: string | null;
+  originalOrientation?: "Landscape" | "Portrait" | null;
   purchaseType: "original" | "print";
   printSize?: string;
 };
@@ -28,9 +29,16 @@ function parseDimensions(value: string | null | undefined) {
   return null;
 }
 
-export function ArtOnWallButton({ imageUrl, productName, originalDimensions, purchaseType, printSize }: Props) {
+export function ArtOnWallButton({ imageUrl, productName, originalDimensions, originalOrientation, purchaseType, printSize }: Props) {
   const [open, setOpen] = useState(false);
-  const size = purchaseType === "print" ? parseDimensions(printSize) : parseDimensions(originalDimensions);
+  const parsedSize = purchaseType === "print" ? parseDimensions(printSize) : parseDimensions(originalDimensions);
+  const size = parsedSize && purchaseType === "original" && originalOrientation
+    ? originalOrientation === "Landscape" && parsedSize.height > parsedSize.width
+      ? { width: parsedSize.height, height: parsedSize.width }
+      : originalOrientation === "Portrait" && parsedSize.width > parsedSize.height
+        ? { width: parsedSize.height, height: parsedSize.width }
+        : parsedSize
+    : parsedSize;
   const heightCm = size?.height ?? null;
   const heightFraction = heightCm ? Math.min(heightCm / WALL_HEIGHT_CM * MARKED_WALL_FRACTION, 0.72) : 0.2;
   const widthFraction = size && size.height > 0 ? Math.min(heightFraction * size.width / size.height, 0.72) : heightFraction * 0.72;

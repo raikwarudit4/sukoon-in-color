@@ -101,6 +101,7 @@ export default async function ProductPage({
   const specificationRows = [
     ["International shipping", artworkSpecs.international_shipping],
     ["Size", artworkSpecs.size],
+    ["Orientation", artworkSpecs.orientation],
     ["Medium", artworkSpecs.medium],
     ["Style", artworkSpecs.style],
     ["Created in", artworkSpecs.created_in],
@@ -214,6 +215,7 @@ export default async function ProductPage({
             productName={product.name}
             imageUrl={images[0]?.url ?? null}
             originalDimensions={typeof artworkSpecs.size === "string" ? artworkSpecs.size : null}
+            originalOrientation={artworkSpecs.orientation === "Landscape" || artworkSpecs.orientation === "Portrait" ? artworkSpecs.orientation : null}
           />
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <FavoriteButton

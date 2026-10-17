@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 export type ArtworkSpecs = {
   international_shipping: "Yes" | "No" | "";
   size: string;
+  orientation: "Landscape" | "Portrait" | "";
   medium: string;
   style: string;
   created_in: string;
@@ -97,7 +98,8 @@ function ProductDetailsForm({ storeId, product, images }: { storeId: string; pro
     const values = saved && typeof saved === "object" && !Array.isArray(saved) ? saved as Partial<ArtworkSpecs> : {};
     return {
       international_shipping: values.international_shipping === "Yes" || values.international_shipping === "No" ? values.international_shipping : "",
-      size: values.size ?? "", medium: values.medium ?? "", style: values.style ?? "", created_in: values.created_in ?? "",
+      size: values.size ?? "", orientation: values.orientation === "Landscape" || values.orientation === "Portrait" ? values.orientation : "",
+      medium: values.medium ?? "", style: values.style ?? "", created_in: values.created_in ?? "",
       surface: values.surface ?? "", lot_number: values.lot_number ?? "", domestic_shipping_time: values.domestic_shipping_time ?? "",
       international_shipping_time: values.international_shipping_time ?? "",
     };
@@ -243,6 +245,7 @@ function ProductDetailsForm({ storeId, product, images }: { storeId: string; pro
       <div className="sm:col-span-2 border-t border-[#eee5de] pt-4"><h3 className="font-medium">Artwork specifications</h3><p className="mt-1 text-xs font-normal text-[#716763]">Optional details appear on the public product page only when filled in.</p></div>
       <label className="block text-sm font-medium">International shipping<select value={specs.international_shipping} onChange={(event) => setSpecs({ ...specs, international_shipping: event.target.value as ArtworkSpecs["international_shipping"] })} className="mt-2 w-full rounded-xl border border-[#d9c9bf] bg-white px-4 py-3 font-normal"><option value="">Not specified</option><option value="Yes">Available</option><option value="No">Not available</option></select></label>
       <label className="block text-sm font-medium">Size<input maxLength={160} value={specs.size} onChange={(event) => setSpecs({ ...specs, size: event.target.value })} placeholder="e.g. 36 × 24 in / 91.4 × 61 cm" className="mt-2 w-full rounded-xl border border-[#d9c9bf] px-4 py-3 font-normal" /></label>
+      <label className="block text-sm font-medium">Painting orientation<select value={specs.orientation} onChange={(event) => setSpecs({ ...specs, orientation: event.target.value as ArtworkSpecs["orientation"] })} className="mt-2 w-full rounded-xl border border-[#d9c9bf] bg-white px-4 py-3 font-normal"><option value="">Not specified (use dimensions)</option><option value="Landscape">Landscape</option><option value="Portrait">Portrait</option></select><span className="mt-1 block text-xs font-normal text-[#716763]">Shown in specifications and used to orient the original painting in Art on Wall. Print previews follow the selected print size.</span></label>
       <label className="block text-sm font-medium">Medium<input maxLength={160} value={specs.medium} onChange={(event) => setSpecs({ ...specs, medium: event.target.value })} placeholder="e.g. Oil on canvas" className="mt-2 w-full rounded-xl border border-[#d9c9bf] px-4 py-3 font-normal" /></label>
       <label className="block text-sm font-medium">Style<input maxLength={160} value={specs.style} onChange={(event) => setSpecs({ ...specs, style: event.target.value })} className="mt-2 w-full rounded-xl border border-[#d9c9bf] px-4 py-3 font-normal" /></label>
       <label className="block text-sm font-medium">Created in<input inputMode="numeric" maxLength={4} value={specs.created_in} onChange={(event) => setSpecs({ ...specs, created_in: event.target.value })} placeholder="e.g. 2026" className="mt-2 w-full rounded-xl border border-[#d9c9bf] px-4 py-3 font-normal" /></label>

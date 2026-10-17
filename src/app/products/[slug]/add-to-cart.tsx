@@ -26,6 +26,7 @@ type AddToCartProps = {
   productName: string;
   imageUrl: string | null;
   originalDimensions: string | null;
+  originalOrientation: "Landscape" | "Portrait" | null;
 };
 
 function formatPrice(amountMinor: number, currency: string) {
@@ -36,7 +37,7 @@ function formatPrice(amountMinor: number, currency: string) {
   }).format(amountMinor / 100);
 }
 
-export function AddToCart({ storeId, variants, saleOptions: rawSaleOptions, returnPath, productName, imageUrl, originalDimensions }: AddToCartProps) {
+export function AddToCart({ storeId, variants, saleOptions: rawSaleOptions, returnPath, productName, imageUrl, originalDimensions, originalOrientation }: AddToCartProps) {
   const router = useRouter();
   const savedOptions = rawSaleOptions && typeof rawSaleOptions === "object" ? rawSaleOptions as Partial<SaleOptions> : {};
   const saleOptions: SaleOptions = {
@@ -142,7 +143,7 @@ export function AddToCart({ storeId, variants, saleOptions: rawSaleOptions, retu
 
       {selectedVariant && <p className="text-sm text-[#716763]">{purchaseType === "original" ? "Original painting" : `${printSize} · ${printMaterial}`} · {selectedVariant.title}</p>}
 
-      {imageUrl && <div className="-mt-1"><ArtOnWallButton imageUrl={imageUrl} productName={productName} originalDimensions={originalDimensions} purchaseType={purchaseType as "original" | "print"} printSize={printSize} /></div>}
+      {imageUrl && <div className="-mt-1"><ArtOnWallButton imageUrl={imageUrl} productName={productName} originalDimensions={originalDimensions} originalOrientation={originalOrientation} purchaseType={purchaseType as "original" | "print"} printSize={printSize} /></div>}
 
       {selectedVariant && (
         <p className="text-2xl font-semibold">
