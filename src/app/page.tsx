@@ -210,6 +210,8 @@ export default async function Home({
           <nav aria-label="Store policies" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             <Link href="/cancellation-refunds" className="hover:text-[#a15e61]">Cancellation &amp; refunds</Link>
             <Link href="/shipping-delivery" className="hover:text-[#a15e61]">Shipping &amp; delivery</Link>
+            <Link href="/privacy" className="hover:text-[#a15e61]">Privacy</Link>
+            <Link href="/terms" className="hover:text-[#a15e61]">Terms</Link>
             <Link href="/contact" className="hover:text-[#a15e61]">Contact</Link>
             <a href="mailto:support@sukoonincolor.com" className="hover:text-[#a15e61]">support@sukoonincolor.com</a>
             <a href="tel:+917000887490" className="hover:text-[#a15e61]">7000887490</a>
