@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export function AccountNav() {
-  const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [canManageOrders, setCanManageOrders] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
@@ -93,14 +91,6 @@ export function AccountNav() {
     };
   }, []);
 
-  async function signOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    setEmail(null);
-    setMenuOpen(false);
-    router.refresh();
-  }
-
   return (
     <nav aria-label="Account" className="relative text-sm">
       <div className="hidden items-center gap-4 md:flex">
@@ -110,9 +100,6 @@ export function AccountNav() {
             <Link href="/wishlist" className="text-[#716763] hover:text-[#a15e61]">Wishlist{savedCount > 0 ? `(${savedCount})` : ""}</Link>
             {canManageOrders && <Link href="/admin" className="text-[#716763] hover:text-[#a15e61]">Manage store</Link>}
             <Link href="/orders" className="text-[#716763] hover:text-[#a15e61]">Orders</Link>
-            <button type="button" onClick={signOut} className="font-medium text-[#a15e61] hover:underline" title={`Signed in as ${email}`}>
-              Sign out
-            </button>
           </>
         ) : (
           <Link href="/auth/sign-in" className="font-medium text-[#a15e61] hover:underline">Sign in</Link>
@@ -139,7 +126,6 @@ export function AccountNav() {
               <Link href="/wishlist" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-[#716763] hover:bg-[#fbf8f4]">Wishlist{savedCount > 0 ? `(${savedCount})` : ""}</Link>
               {canManageOrders && <Link href="/admin" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-[#716763] hover:bg-[#fbf8f4]">Manage store</Link>}
               <Link href="/orders" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-[#716763] hover:bg-[#fbf8f4]">Orders</Link>
-              <button type="button" onClick={signOut} className="rounded-xl px-3 py-2.5 text-left font-medium text-[#a15e61] hover:bg-[#fbf8f4]">Sign out</button>
             </>
           ) : (
             <Link href="/auth/sign-in" onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-2.5 font-medium text-[#a15e61] hover:bg-[#fbf8f4]">Sign in</Link>
