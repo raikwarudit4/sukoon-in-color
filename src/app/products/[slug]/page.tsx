@@ -101,7 +101,6 @@ export default async function ProductPage({
   const specificationRows = [
     ["International shipping", artworkSpecs.international_shipping],
     ["Size", artworkSpecs.size],
-    ["Orientation", artworkSpecs.orientation],
     ["Medium", artworkSpecs.medium],
     ["Style", artworkSpecs.style],
     ["Created in", artworkSpecs.created_in],
