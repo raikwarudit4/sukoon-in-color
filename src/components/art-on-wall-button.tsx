@@ -53,7 +53,7 @@ export function ArtOnWallButton({ imageUrl, productName, originalDimensions, ori
         <div className="relative aspect-[1364/789] overflow-hidden bg-[#eee9e4]">
           <img src="https://ahmwtluxkmjsycksumvj.supabase.co/storage/v1/object/public/art-on-wall/art-on-wall-background-new.jpg" alt="Room wall for artwork size preview" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute left-[32%] top-[39%] flex -translate-x-1/2 -translate-y-1/2 items-center gap-2" style={{ width: `${widthFraction * 100}%`, height: `${heightFraction * 100}%` }}>
-            <img src={imageUrl} alt={productName} className="h-full w-full object-fill shadow-md" />
+            <img src={imageUrl} alt={productName} className="h-full w-full object-contain shadow-md" />
             {heightCm && <span className="absolute -right-7 top-0 h-full border-l border-[#27221f] after:absolute after:-left-1 after:top-0 after:h-px after:w-2 after:bg-[#27221f] before:absolute before:-left-1 before:bottom-0 before:h-px before:w-2 before:bg-[#27221f]" />}
           </div>
         </div>
