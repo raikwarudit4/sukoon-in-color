@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { hasStorePermission } from "@/lib/auth/store-permissions";
 
 type SalesDay = { date: string; amount_minor: number };
 type RankedProduct = { name: string; units_sold: number; sales_minor: number };
@@ -62,8 +63,8 @@ export default async function StoreDashboardPage() {
     .select("id, name, default_currency").eq("slug", "sukoon-in-color").eq("status", "active").maybeSingle();
   if (storeError || !store) return <main className="p-10">Store dashboard is unavailable.</main>;
 
-  const { data: member, error: memberError } = await supabase.rpc("is_store_member", { target_store: store.id });
-  if (memberError || member !== true) return <main className="grid min-h-screen place-items-center bg-[#fbf8f4] px-6 text-[#27221f]"><section className="max-w-md rounded-2xl border border-[#ead5d2] bg-white p-8 text-center">
+  const canReadReports = await hasStorePermission(supabase, store.id, "reports.read");
+  if (!canReadReports) return <main className="grid min-h-screen place-items-center bg-[#fbf8f4] px-6 text-[#27221f]"><section className="max-w-md rounded-2xl border border-[#ead5d2] bg-white p-8 text-center">
     <h1 className="text-xl font-medium">Store access required</h1><p className="mt-2 text-sm text-[#716763]">This account cannot access store insights.</p><Link href="/" className="mt-5 inline-block font-semibold text-[#a15e61]">Back to shop</Link>
   </section></main>;
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ReviewActions } from "./review-actions";
+import { hasStorePermission } from "@/lib/auth/store-permissions";
 
 type PendingReview = {
   id: string;
@@ -21,8 +22,8 @@ export default async function StoreReviewsPage() {
     .select("id").eq("slug", "sukoon-in-color").eq("status", "active").maybeSingle();
   if (storeError || !store) return <main className="p-10">Store reviews are unavailable.</main>;
 
-  const { data: isMember, error: memberError } = await supabase.rpc("is_store_member", { target_store: store.id });
-  if (memberError || isMember !== true) {
+  const canModerateReviews = await hasStorePermission(supabase, store.id, "reviews.moderate");
+  if (!canModerateReviews) {
     return (
       <main className="grid min-h-screen place-items-center bg-[#fbf8f4] px-6 text-[#27221f]">
         <section className="max-w-md rounded-2xl border border-[#ead5d2] bg-white p-8 text-center">

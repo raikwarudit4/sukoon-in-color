@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasAllowedRequestOrigin } from "@/lib/request-origin";
 import { getShiprocketBaseUrl, getShiprocketMode, getShiprocketToken } from "@/lib/shiprocket/mode";
+import { hasStorePermission } from "@/lib/auth/store-permissions";
 
 export const runtime = "nodejs";
 
@@ -43,8 +44,7 @@ export async function POST(request: Request) {
   const { data: store, error: storeError } = await supabase.from("stores")
     .select("id").eq("slug", "sukoon-in-color").eq("status", "active").maybeSingle();
   if (storeError || !store) return Response.json({ error: "The store is unavailable." }, { status: 503 });
-  const { data: isMember, error: memberError } = await supabase.rpc("is_store_member", { target_store: store.id });
-  if (memberError || isMember !== true) return Response.json({ error: "Store membership is required." }, { status: 403 });
+  if (!(await hasStorePermission(supabase, store.id, "orders.manage"))) return Response.json({ error: "Order management permission is required." }, { status: 403 });
 
   const { data: order, error: orderError } = await supabase.from("orders")
     .select("id, order_number, status, user_id, currency, subtotal_minor, shipping_minor, total_minor, order_addresses(kind, recipient_name, phone, address_line1, address_line2, locality, city, region, postal_code, country_code), order_items(sku_snapshot, product_name_snapshot, quantity, line_total_minor), payments(provider, status)")

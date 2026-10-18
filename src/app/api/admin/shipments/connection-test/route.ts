@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { hasAllowedRequestOrigin } from "@/lib/request-origin";
 import { getShiprocketMode, getShiprocketToken } from "@/lib/shiprocket/mode";
+import { hasStorePermission } from "@/lib/auth/store-permissions";
 
 export const runtime = "nodejs";
 
@@ -16,8 +17,7 @@ export async function POST(request: Request) {
   if (authError || !user) return Response.json({ error: "Sign in with the store account." }, { status: 401 });
   const { data: store } = await supabase.from("stores").select("id").eq("slug", "sukoon-in-color").eq("status", "active").maybeSingle();
   if (!store) return Response.json({ error: "The store is unavailable." }, { status: 503 });
-  const { data: isMember } = await supabase.rpc("is_store_member", { target_store: store.id });
-  if (isMember !== true) return Response.json({ error: "Store membership is required." }, { status: 403 });
+  if (!(await hasStorePermission(supabase, store.id, "orders.manage"))) return Response.json({ error: "Order management permission is required." }, { status: 403 });
 
   try {
     await getShiprocketToken(mode);

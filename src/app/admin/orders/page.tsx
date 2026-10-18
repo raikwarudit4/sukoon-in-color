@@ -5,6 +5,7 @@ import { OrderActions } from "./order-actions";
 import { ShipmentPanel } from "./shipment-panel";
 import { ReturnRequestActions } from "./return-request-actions";
 import { ReturnEvidence } from "@/app/orders/return-evidence";
+import { hasStorePermission } from "@/lib/auth/store-permissions";
 
 type StoreOrder = {
   id: string;
@@ -73,8 +74,8 @@ export default async function StoreOrdersPage() {
   const { data: store, error: storeError } = await supabase.from("stores").select("id").eq("slug", "sukoon-in-color").eq("status", "active").maybeSingle();
   if (storeError || !store) return <main className="p-10">Store orders are unavailable.</main>;
 
-  const { data: member, error: memberError } = await supabase.rpc("is_store_member", { target_store: store.id });
-  if (memberError || member !== true) return (
+  const canManageOrders = await hasStorePermission(supabase, store.id, "orders.manage");
+  if (!canManageOrders) return (
     <main className="grid min-h-screen place-items-center bg-[#fbf8f4] px-6 text-[#27221f]"><div className="max-w-md rounded-2xl border border-[#ead5d2] bg-white p-8 text-center">
       <h1 className="text-xl font-medium">Store access required</h1><p className="mt-2 text-sm text-[#716763]">This account is not an active member of the store.</p><Link href="/" className="mt-5 inline-block text-sm font-semibold text-[#a15e61]">Back to shop</Link>
     </div></main>

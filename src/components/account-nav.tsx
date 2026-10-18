@@ -61,12 +61,12 @@ export function AccountNav() {
         return;
       }
       activeStoreId = store.id;
-      const [{ data: member, error }, { data: profile }] = await Promise.all([
-        supabase.rpc("is_store_member", { target_store: store.id }),
+      const [{ data: canManageOrders, error }, { data: profile }] = await Promise.all([
+        supabase.rpc("has_store_permission", { target_store: store.id, required_permission: "orders.manage" }),
         supabase.from("users").select("id").eq("auth_user_id", user.id).maybeSingle(),
       ]);
       activeProfileId = profile?.id ?? null;
-      if (isMounted) setCanManageOrders(!error && member === true);
+      if (isMounted) setCanManageOrders(!error && canManageOrders === true);
       await refreshCounts();
     }
 

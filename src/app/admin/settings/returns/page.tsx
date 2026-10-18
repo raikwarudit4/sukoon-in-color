@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ReturnsFeatureForm } from "./returns-feature-form";
+import { hasStorePermission } from "@/lib/auth/store-permissions";
 
 export default async function ReturnsSettingsPage() {
   const supabase = await createClient();
@@ -12,8 +13,8 @@ export default async function ReturnsSettingsPage() {
     .eq("slug", "sukoon-in-color").eq("status", "active").maybeSingle();
   if (storeError || !store) return <main className="grid min-h-screen place-items-center bg-[#fbf8f4] p-6 text-[#27221f]"><p>Store settings are unavailable.</p></main>;
 
-  const { data: isMember, error: membershipError } = await supabase.rpc("is_store_member", { target_store: store.id });
-  if (membershipError || isMember !== true) return (
+  const canManageStore = await hasStorePermission(supabase, store.id, "store.manage");
+  if (!canManageStore) return (
     <main className="grid min-h-screen place-items-center bg-[#fbf8f4] px-6 text-[#27221f]">
       <section className="max-w-md rounded-2xl border border-[#ead5d2] bg-white p-8 text-center">
         <h1 className="text-xl font-medium">Store access required</h1>
